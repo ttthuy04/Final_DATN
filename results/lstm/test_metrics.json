@@ -1,0 +1,24 @@
+{
+  "model": "lstm",
+  "variant": "custom_weights_optimized",
+  "class_weights": [
+    1.6,
+    1.0,
+    1.0,
+    1.3
+  ],
+  "num_params": 631812,
+  "accuracy": 0.8668885191347754,
+  "precision_macro": 0.8696352436191394,
+  "recall_macro": 0.8667880794701986,
+  "f1_macro": 0.8668745449111804,
+  "test_samples": 601,
+  "class_names": [
+    "normal",
+    "sleep",
+    "standing",
+    "use_phone"
+  ],
+  "best_val_acc": 0.885,
+  "best_val_f1": 0.8838772736193776
+}

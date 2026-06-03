@@ -1,31 +1,40 @@
 # Student Behavior Recognition
 
-Hệ thống nhận diện hành vi sinh viên trong lớp học dựa trên video, sử dụng pipeline: tiền xử lý video → trích xuất skeleton → huấn luyện mô hình (LSTM / ST-GCN / ST-LSTM).
+Hệ thống nhận diện hành vi sinh viên trong lớp học dựa trên video.
+
+**Pipeline:** tiền xử lý video → trích xuất skeleton → train model → evaluate
 
 ## Cấu trúc dự án
 
 ```
 Student_Behavior_Recognition_v3/
-├── data/                    # Dataset (LOCAL — không có trên GitHub)
-│   ├── raw/                 # Video gốc
-│   ├── labeled/             # Clip đã gán nhãn
-│   └── skeleton/            # Dữ liệu skeleton
+├── data/                        # Dataset (LOCAL — không có trên GitHub)
+│   ├── raw/
+│   ├── labeled/
+│   └── skeleton/
 ├── src/
-│   ├── dataset/             # Dataset loader, build dataset
-│   ├── models/              # LSTM, ST-GCN, ST-LSTM
-│   ├── preprocess/          # Cắt video, trích xuất skeleton
-│   ├── train/               # Script huấn luyện
-│   └── visualization/       # Hiển thị skeleton
-├── main.py
+│   ├── common/                  # Dùng chung: log, plot, paths
+│   ├── dataset/                 # Loader skeleton
+│   ├── preprocess/              # Cắt video, extract skeleton
+│   ├── lstm/                    # Thuật toán 1: BiLSTM
+│   ├── stgcn/                   # Thuật toán 2: ST-GCN
+│   └── agcn/                    # Thuật toán 3: 2s-AGCN
+├── models_saved/                # Trọng số model (gitignore)
+│   ├── lstm/best.pt
+│   ├── stgcn/best.pt
+│   └── agcn/best.pt
+├── results/                     # Kết quả train & evaluate
+│   ├── lstm/
+│   ├── stgcn/
+│   └── agcn/
 ├── requirements.txt
 └── README.md
 ```
 
-## Nhãn hành vi
+## Nhãn hành vi (4 lớp)
 
 | Thư mục | Mô tả |
 |---------|--------|
-| `distracted` | Mất tập trung |
 | `normal` | Ngồi học bình thường |
 | `sleep` | Ngủ gật |
 | `standing` | Đứng dậy |
@@ -33,57 +42,51 @@ Student_Behavior_Recognition_v3/
 
 ## Cài đặt
 
-```bash
-# Clone repository
-git clone https://github.com/<username>/<repo-name>.git
-cd Student_Behavior_Recognition_v3
-
-# Tạo môi trường ảo (khuyến nghị)
+```powershell
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux/macOS
-
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-## Dataset
-
-**Dữ liệu không nằm trên GitHub** (~50 GB video/nhãn).
-
-Sau khi clone, tạo hoặc copy dữ liệu vào `data/` theo hướng dẫn trong [`data/README.md`](data/README.md):
-
-1. `data/raw/` — video gốc  
-2. `data/labeled/<class>/` — clip đã gán nhãn  
-3. `data/skeleton/` — đầu ra bước trích xuất skeleton  
-
-Sao lưu dataset: ổ cứng ngoài / cloud (OneDrive, Google Drive, …). Có thể ghi link tải dataset trong Issues hoặc tài liệu đồ án.
-
-## Quy trình làm việc
+## Quy trình
 
 ```text
-raw video  →  cut & label  →  extract skeleton  →  train model  →  evaluate / visualize
-   (raw)         (labeled)         (skeleton)          (models)
+raw → cut & label → extract skeleton → train → evaluate → plot
 ```
 
-Script tham chiếu:
+```powershell
+# Tiền xử lý
+python src/preprocess/extract_skeleton.py
 
-- `src/preprocess/cut_video.py` — cắt video  
-- `src/preprocess/extract_skeleton.py` — trích xuất skeleton  
-- `src/dataset/build_dataset.py` — xây dataset  
-- `src/models/` — định nghĩa mô hình  
-- `src/visualization/visualize_skeleton.py` — kiểm tra skeleton  
+# --- LSTM ---
+python src/lstm/train.py
+python src/lstm/evaluate.py
+python src/common/plot_history.py --model lstm
 
-## Đẩy code lên GitHub
+# --- ST-GCN ---
+python src/stgcn/train.py
+python src/stgcn/evaluate.py
+python src/common/plot_history.py --model stgcn
 
-```bash
-git init
-git add .
-git status    # Đảm bảo KHÔNG có file trong data/raw, data/labeled, data/skeleton
-git commit -m "Initial commit: project structure and source code"
-git branch -M main
-git remote add origin https://github.com/<username>/<repo-name>.git
-git push -u origin main
+# --- 2s-AGCN ---
+python src/agcn/train.py
+python src/agcn/evaluate.py
+python src/common/plot_history.py --model agcn
+python src/common/compare_models.py
 ```
 
-Trước `git add`, luôn chạy `git status` — chỉ thấy code, `README.md`, `.gitignore`, và `data/README.md`.
+## Output mỗi model
 
+Mỗi thuật toán có thư mục riêng:
+
+| File | Mô tả |
+|------|--------|
+| `models_saved/<model>/best.pt` | Trọng số tốt nhất |
+| `results/<model>/training_log.csv` | Log từng epoch (loss, acc, P, R, F1) |
+| `results/<model>/training_history.png` | Biểu đồ training |
+| `results/<model>/test_metrics.json` | Metrics trên test set |
+| `results/<model>/confusion_matrix.png` | Ma trận nhầm lẫn |
+
+## Dataset
+
+Dữ liệu không nằm trên GitHub (~50 GB). Xem [`data/README.md`](data/README.md).

@@ -1,0 +1,26 @@
+{
+  "model": "stgcn",
+  "variant": "yan2018_spatial_partition",
+  "use_velocity": true,
+  "normalize_root": true,
+  "class_weights": [
+    1.6,
+    1.0,
+    1.0,
+    1.3
+  ],
+  "num_params": 1991094,
+  "accuracy": 0.8752079866888519,
+  "precision_macro": 0.8783313908313908,
+  "recall_macro": 0.8750993377483444,
+  "f1_macro": 0.875517309764568,
+  "test_samples": 601,
+  "class_names": [
+    "normal",
+    "sleep",
+    "standing",
+    "use_phone"
+  ],
+  "best_val_acc": 0.8966666666666666,
+  "best_val_f1": 0.8957761388195122
+}

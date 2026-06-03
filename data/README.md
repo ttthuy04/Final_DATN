@@ -9,7 +9,6 @@ Mỗi máy clone repo cần **tự đặt dữ liệu** vào đúng cấu trúc 
 data/
 ├── raw/          # Video gốc (.mp4) từ camera/lớp học
 ├── labeled/      # Video đã cắt và gán nhãn hành vi
-│   ├── distracted/
 │   ├── normal/
 │   ├── sleep/
 │   ├── standing/

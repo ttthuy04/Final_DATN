@@ -27,18 +27,20 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.common.demo_presets import ACCURACY_YOLO_MODEL, accuracy_yolo_config
+from src.common.yolo_person_filter import (
+    YoloPersonFilterConfig,
+    extract_person_boxes,
+    filter_person_boxes,
+    passes_pose_gate,
+    yolo_predict_kwargs,
+)
 from src.preprocess.extract_skeleton import N_FEATURES, N_LANDMARKS, get_model_path, landmarks_to_vector
+from src.visualization.skeleton_draw import draw_skeleton_from_landmarks
 
 DEFAULT_VIDEO = PROJECT_ROOT / "data" / "raw" / "test1.mp4"
 DEFAULT_OUT_DIR = PROJECT_ROOT / "results" / "demo_check" / "step2_crops"
 DEFAULT_PREVIEW = PROJECT_ROOT / "results" / "demo_check" / "step2_skeleton_preview.mp4"
-
-PERSON_CLASS = 0
-SKELETON_EDGES = [
-    (11, 12), (11, 13), (13, 15), (12, 14), (14, 16),
-    (11, 23), (12, 24), (23, 24),
-    (0, 1), (1, 2), (2, 3), (0, 4), (4, 5), (5, 6),
-]
 
 
 def parse_args():
@@ -46,9 +48,10 @@ def parse_args():
     p.add_argument("--video", type=str, default=str(DEFAULT_VIDEO))
     p.add_argument("--out-dir", type=str, default=str(DEFAULT_OUT_DIR))
     p.add_argument("--preview", type=str, default=str(DEFAULT_PREVIEW))
-    p.add_argument("--model", type=str, default="yolo11s.pt")
-    p.add_argument("--conf", type=float, default=0.30)
-    p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--model", type=str, default=ACCURACY_YOLO_MODEL)
+    p.add_argument("--conf", type=float, default=0.10)
+    p.add_argument("--imgsz", type=int, default=1280)
+    p.add_argument("--min-box-h", type=int, default=25)
     p.add_argument(
         "--detect-every",
         type=int,
@@ -61,7 +64,6 @@ def parse_args():
         help="Tat ByteTrack — ID nguoi co the nhay giua cac frame",
     )
     p.add_argument("--padding", type=float, default=0.15, help="Mo rong bbox (ty le)")
-    p.add_argument("--min-box-h", type=int, default=60, help="Bo qua bbox qua thap")
     p.add_argument("--max-frames", type=int, default=90, help="0 = het video")
     p.add_argument(
         "--save-crop-images",
@@ -85,29 +87,8 @@ def create_image_landmarker(model_path: Path) -> PoseLandmarker:
     return PoseLandmarker.create_from_options(opts)
 
 
-def boxes_from_yolo(results) -> list[tuple[int, int, int, int, int]]:
-    """(track_id, x1, y1, x2, y2). track_id=-1 neu khong tracking."""
-    boxes = []
-    for box in results.boxes:
-        if int(box.cls[0]) != PERSON_CLASS:
-            continue
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-        tid = -1
-        if box.id is not None:
-            tid = int(box.id[0])
-        boxes.append((tid, x1, y1, x2, y2))
-    return boxes
-
-
-def run_yolo(frame, yolo, args, use_track: bool):
-    kwargs = dict(
-        conf=args.conf,
-        classes=[PERSON_CLASS],
-        imgsz=args.imgsz,
-        iou=0.45,
-        device="cpu",
-        verbose=False,
-    )
+def run_yolo(frame, yolo, yolo_cfg: YoloPersonFilterConfig, use_track: bool):
+    kwargs = yolo_predict_kwargs(yolo_cfg)
     if use_track:
         return yolo.track(frame, persist=True, tracker="bytetrack.yaml", **kwargs)[0]
     return yolo(frame, **kwargs)[0]
@@ -125,29 +106,13 @@ def expand_bbox(x1, y1, x2, y2, w, h, pad: float):
 def draw_landmarks_on_crop(crop_bgr: np.ndarray, lms) -> np.ndarray:
     vis = crop_bgr.copy()
     ch, cw = vis.shape[:2]
-    pts = []
-    for i in range(min(N_LANDMARKS, len(lms))):
-        cx = int(lms[i].x * cw)
-        cy = int(lms[i].y * ch)
-        pts.append((cx, cy))
-        cv2.circle(vis, (cx, cy), 3, (0, 0, 255), -1)
-    for a, b in SKELETON_EDGES:
-        if a < len(pts) and b < len(pts):
-            cv2.line(vis, pts[a], pts[b], (255, 120, 0), 2)
+    draw_skeleton_from_landmarks(vis, lms, 0, 0, cw, ch)
     cv2.putText(vis, "OK", (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
     return vis
 
 
 def draw_landmarks_on_frame(frame, x1, y1, crop_w, crop_h, lms) -> None:
-    pts = []
-    for i in range(min(N_LANDMARKS, len(lms))):
-        px = int(x1 + lms[i].x * crop_w)
-        py = int(y1 + lms[i].y * crop_h)
-        pts.append((px, py))
-        cv2.circle(frame, (px, py), 4, (0, 0, 255), -1)
-    for a, b in SKELETON_EDGES:
-        if a < len(pts) and b < len(pts):
-            cv2.line(frame, pts[a], pts[b], (255, 120, 0), 2)
+    draw_skeleton_from_landmarks(frame, lms, x1, y1, crop_w, crop_h)
 
 
 def detect_skeleton_on_crop(landmarker: PoseLandmarker, crop_bgr: np.ndarray):
@@ -184,6 +149,8 @@ def main():
     if not args.no_preview:
         print(f"Preview: {preview_path}")
 
+    yolo_cfg = accuracy_yolo_config()
+
     mp_path = get_model_path(PROJECT_ROOT)
     yolo = YOLO(args.model)
     landmarker = create_image_landmarker(mp_path)
@@ -203,7 +170,7 @@ def main():
         )
 
     use_track = not args.no_track
-    last_boxes: list[tuple[int, int, int, int, int]] = []
+    last_boxes = []
     ok_count = 0
     fail_count = 0
     saved_images = 0
@@ -218,35 +185,40 @@ def main():
             break
 
         # YOLO track moi frame de giu ID on dinh; skeleton co the moi N frame
-        results = run_yolo(frame, yolo, args, use_track)
-        last_boxes = boxes_from_yolo(results)
+        results = run_yolo(frame, yolo, yolo_cfg, use_track)
+        raw = extract_person_boxes(results, h, w)
+        last_boxes = filter_person_boxes(raw, h, w, yolo_cfg, use_pose_gate=False)
 
         frame_vis = frame.copy()
         n_ok_frame = 0
-        run_skel = (frame_idx % args.detect_every == 0)
+        run_skel = frame_idx % args.detect_every == 0
 
-        for pi, (track_id, x1, y1, x2, y2) in enumerate(last_boxes):
-            if (y2 - y1) < args.min_box_h:
-                continue
+        for pi, pbox in enumerate(last_boxes):
+            track_id = pbox.track_id if pbox.track_id >= 0 else pi
+            x1, y1, x2, y2 = pbox.x1, pbox.y1, pbox.x2, pbox.y2
             ex1, ey1, ex2, ey2 = expand_bbox(x1, y1, x2, y2, w, h, args.padding)
             crop = frame[ey1:ey2, ex1:ex2]
             if crop.size == 0:
                 continue
 
-            id_label = f"ID{track_id}" if track_id >= 0 else f"P{pi}"
+            id_label = f"ID{track_id}"
             status = "SKIP"
             crop_vis = crop.copy()
             lms = None
 
             if run_skel:
                 vec, lms, crop_vis = detect_skeleton_on_crop(landmarker, crop)
-                status = "OK" if vec is not None else "FAIL"
-                if vec is not None:
+                if not passes_pose_gate(pbox, vec, yolo_cfg):
+                    status = "DROP"
+                    fail_count += 1
+                elif vec is not None:
+                    status = "OK"
                     ok_count += 1
                     n_ok_frame += 1
                     crop_h, crop_w = crop.shape[:2]
                     draw_landmarks_on_frame(frame_vis, ex1, ey1, crop_w, crop_h, lms)
                 else:
+                    status = "FAIL"
                     fail_count += 1
 
             cv2.rectangle(frame_vis, (ex1, ey1), (ex2, ey2), (0, 255, 0), 2)
@@ -256,7 +228,7 @@ def main():
                 (ex1, max(ey1 - 8, 15)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                (0, 255, 0) if status == "OK" else (0, 0, 255) if status == "FAIL" else (0, 255, 255),
+                (0, 255, 0) if status == "OK" else (0, 0, 255) if status in ("FAIL", "DROP") else (0, 255, 255),
                 2,
             )
 

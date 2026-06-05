@@ -1,0 +1,34 @@
+{
+  "video": "data\\raw\\test11.mp4",
+  "stats_by_class": {
+    "normal": 7,
+    "sleep": 1,
+    "standing": 0,
+    "use_phone": 6
+  },
+  "stats_from_log": {
+    "normal": 7,
+    "sleep": 1,
+    "standing": 0,
+    "use_phone": 6
+  },
+  "stats_from_tracks": {
+    "normal": 9,
+    "sleep": 0,
+    "standing": 0,
+    "use_phone": 5
+  },
+  "last_frame_counts": {
+    "normal": 8,
+    "use_phone": 2
+  },
+  "total_students": 14,
+  "tracks_detected": 19,
+  "frames_processed": 636,
+  "class_names": [
+    "normal",
+    "sleep",
+    "standing",
+    "use_phone"
+  ]
+}

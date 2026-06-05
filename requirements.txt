@@ -6,3 +6,4 @@ scikit-learn
 torch
 matplotlib
 ultralytics
+gradio>=4.0.0

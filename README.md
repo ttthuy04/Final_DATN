@@ -75,6 +75,16 @@ python src/common/plot_history.py --model agcn
 python src/common/compare_models.py
 ```
 
+## Web demo (bao ve)
+
+Upload video → nhan dien hanh vi → video ket qua + bang thong ke.
+
+```powershell
+python web/app.py
+```
+
+Mo **http://127.0.0.1:7860**. Chi tiet: [`web/README.md`](web/README.md).
+
 ## Output mỗi model
 
 Mỗi thuật toán có thư mục riêng:

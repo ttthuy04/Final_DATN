@@ -1,14 +1,10 @@
 """
 Pipeline demo lop hoc: YOLO track -> MediaPipe skeleton -> ST-GCN -> video + thong ke.
 
-Dung chung cho:
-  - script/step3_classroom_demo.py (CLI)
-  - web/app.py (Gradio)
+Dung cho: script/step3_classroom_demo.py (CLI)
 """
 from __future__ import annotations
 
-import csv
-import json
 import time
 from collections import Counter, defaultdict, deque
 from dataclasses import asdict, dataclass, field
@@ -74,8 +70,6 @@ class DemoConfig:
     """Mac dinh = preset chinh xac (xem src/common/demo_presets.py)."""
     video_path: Path
     output_video: Path
-    log_csv: Path
-    stats_json: Path | None = None
     yolo_model: str = ACCURACY_YOLO_MODEL
     conf: float = 0.10
     imgsz: int = 1280
@@ -95,9 +89,6 @@ class DemoConfig:
     def __post_init__(self) -> None:
         self.video_path = Path(self.video_path)
         self.output_video = Path(self.output_video)
-        self.log_csv = Path(self.log_csv)
-        if self.stats_json is not None:
-            self.stats_json = Path(self.stats_json)
 
     def yolo_filter_config(self):
         cfg = accuracy_yolo_config()
@@ -110,8 +101,6 @@ class DemoConfig:
 @dataclass
 class DemoResult:
     output_video: Path
-    log_csv: Path
-    stats_json: Path | None
     class_names: list[str]
     stats_by_class: dict[str, int]
     stats_table: list[list]
@@ -124,8 +113,6 @@ class DemoResult:
     def to_dict(self) -> dict:
         return {
             "output_video": str(self.output_video),
-            "log_csv": str(self.log_csv),
-            "stats_json": str(self.stats_json) if self.stats_json else None,
             "class_names": self.class_names,
             "stats_by_class": self.stats_by_class,
             "total_students": self.total_students,
@@ -218,18 +205,18 @@ def stable_label(track: TrackState, min_agree: int) -> str | None:
     return None
 
 
+def stats_panel_height(class_names: list[str]) -> int:
+    return 36 + 26 * len(class_names) + 10
+
+
 def draw_stats_panel(frame, counts: dict[str, int], class_names: list[str]) -> None:
-    x0, y0 = frame.shape[1] - 320, 10
-    cv2.rectangle(
-        frame,
-        (x0, y0),
-        (frame.shape[1] - 10, y0 + 30 + 28 * (len(class_names) + 1)),
-        (30, 30, 30),
-        -1,
-    )
+    panel_w = 310
+    x0, y0 = 10, 10
+    panel_h = stats_panel_height(class_names)
+    cv2.rectangle(frame, (x0, y0), (x0 + panel_w, y0 + panel_h), (30, 30, 30), -1)
     cv2.putText(
         frame,
-        "THONG KE LOP",
+        "THONG KE LOP (%)",
         (x0 + 10, y0 + 24),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.65,
@@ -237,23 +224,15 @@ def draw_stats_panel(frame, counts: dict[str, int], class_names: list[str]) -> N
         2,
     )
     total = sum(counts.values())
-    cv2.putText(
-        frame,
-        f"Tong SV: {total}",
-        (x0 + 10, y0 + 50),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.55,
-        (200, 200, 200),
-        1,
-    )
     for i, cls in enumerate(class_names):
         n = counts.get(cls, 0)
+        pct = 100.0 * n / total if total > 0 else 0.0
         vi = LABEL_VI.get(cls, cls)
         col = LABEL_COLOR.get(cls, (255, 255, 255))
         cv2.putText(
             frame,
-            f"{vi}: {n}",
-            (x0 + 10, y0 + 72 + i * 26),
+            f"{vi}: {pct:.1f}%",
+            (x0 + 10, y0 + 50 + i * 26),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.55,
             col,
@@ -354,9 +333,6 @@ def run_classroom_demo(
         raise FileNotFoundError(f"Khong thay video: {config.video_path}")
 
     config.output_video.parent.mkdir(parents=True, exist_ok=True)
-    config.log_csv.parent.mkdir(parents=True, exist_ok=True)
-    if config.stats_json is not None:
-        config.stats_json.parent.mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     _report_progress(progress, 0.02, "Dang load ST-GCN...")
@@ -484,13 +460,13 @@ def run_classroom_demo(
             )
 
         last_frame_counts = dict(frame_counts)
-        if cfg.draw_skeleton:
-            draw_pipeline_legend(frame_vis)
         draw_stats_panel(frame_vis, frame_counts, class_names)
+        if cfg.draw_skeleton:
+            draw_pipeline_legend(frame_vis, y=10 + stats_panel_height(class_names) + 8)
         cv2.putText(
             frame_vis,
             f"Frame {frame_idx + 1}/{total}",
-            (20, 30),
+            (20, h - 15),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
             (255, 255, 255),
@@ -507,38 +483,16 @@ def run_classroom_demo(
     landmarker.close()
     writer.release()
 
-    log_fields = ["frame", "track_id", "label", "conf", "raw_pred", "yolo_conf", "skeleton_ok"]
-    with open(cfg.log_csv, "w", newline="", encoding="utf-8") as f:
-        wcsv = csv.DictWriter(f, fieldnames=log_fields, extrasaction="ignore")
-        wcsv.writeheader()
-        wcsv.writerows(log_rows)
-
     stats_log = aggregate_stats_from_log(log_rows, class_names)
     stats_tracks = aggregate_stats_from_tracks(tracks, class_names)
     stats_by_class = stats_log if sum(stats_log.values()) > 0 else stats_tracks
     stats_table, total_students = build_stats_table(stats_by_class, class_names)
-
-    if cfg.stats_json is not None:
-        payload = {
-            "video": str(cfg.video_path),
-            "stats_by_class": stats_by_class,
-            "stats_from_log": stats_log,
-            "stats_from_tracks": stats_tracks,
-            "last_frame_counts": last_frame_counts,
-            "total_students": total_students,
-            "tracks_detected": len(tracks),
-            "frames_processed": frame_idx,
-            "class_names": class_names,
-        }
-        cfg.stats_json.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     elapsed = time.time() - t0
     _report_progress(progress, 1.0, "Hoan thanh!")
 
     return DemoResult(
         output_video=cfg.output_video,
-        log_csv=cfg.log_csv,
-        stats_json=cfg.stats_json,
         class_names=class_names,
         stats_by_class=stats_by_class,
         stats_table=stats_table,

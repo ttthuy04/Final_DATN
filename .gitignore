@@ -37,8 +37,6 @@ checkpoints/
 weights/
 runs/
 outputs/
-web/uploads/
-web/outputs/
 logs/
 wandb/
 

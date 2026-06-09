@@ -35,19 +35,24 @@ from src.common.yolo_person_filter import (
     passes_pose_gate,
     yolo_predict_kwargs,
 )
+from src.common.demo_check_paths import make_demo_check_run_dir, step2_paths
 from src.preprocess.extract_skeleton import N_FEATURES, N_LANDMARKS, get_model_path, landmarks_to_vector
 from src.visualization.skeleton_draw import draw_skeleton_from_landmarks
 
 DEFAULT_VIDEO = PROJECT_ROOT / "data" / "raw" / "test1.mp4"
-DEFAULT_OUT_DIR = PROJECT_ROOT / "results" / "demo_check" / "step2_crops"
-DEFAULT_PREVIEW = PROJECT_ROOT / "results" / "demo_check" / "step2_skeleton_preview.mp4"
 
 
 def parse_args():
     p = argparse.ArgumentParser(description="Bước 2: skeleton trên crop từ YOLO bbox")
     p.add_argument("--video", type=str, default=str(DEFAULT_VIDEO))
-    p.add_argument("--out-dir", type=str, default=str(DEFAULT_OUT_DIR))
-    p.add_argument("--preview", type=str, default=str(DEFAULT_PREVIEW))
+    p.add_argument(
+        "--run-dir",
+        type=str,
+        default=None,
+        help="Thu muc ket qua (mac dinh: results/demo_check/<ten_video>_<timestamp>/)",
+    )
+    p.add_argument("--out-dir", type=str, default=None)
+    p.add_argument("--preview", type=str, default=None)
     p.add_argument("--model", type=str, default=ACCURACY_YOLO_MODEL)
     p.add_argument("--conf", type=float, default=0.10)
     p.add_argument("--imgsz", type=int, default=1280)
@@ -131,11 +136,28 @@ def detect_skeleton_on_crop(landmarker: PoseLandmarker, crop_bgr: np.ndarray):
     return vec, lms, vis
 
 
+def resolve_step2_outputs(args) -> tuple[Path, Path, Path]:
+    video = Path(args.video)
+    if args.run_dir:
+        run_dir = Path(args.run_dir)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        out_dir, preview_path = step2_paths(run_dir)
+    elif args.out_dir or args.preview:
+        out_dir = Path(args.out_dir) if args.out_dir else Path(args.preview).parent / "step2_crops"
+        preview_path = (
+            Path(args.preview) if args.preview else out_dir.parent / "step2_skeleton_preview.mp4"
+        )
+        run_dir = out_dir.parent
+    else:
+        run_dir = make_demo_check_run_dir(video)
+        out_dir, preview_path = step2_paths(run_dir)
+    return run_dir, out_dir, preview_path
+
+
 def main():
     args = parse_args()
     video = Path(args.video)
-    out_dir = Path(args.out_dir)
-    preview_path = Path(args.preview)
+    run_dir, out_dir, preview_path = resolve_step2_outputs(args)
 
     if not video.exists():
         raise FileNotFoundError(f"Khong thay video: {video}")
@@ -144,8 +166,9 @@ def main():
     preview_path.parent.mkdir(parents=True, exist_ok=True)
 
     print("=== Buoc 2: YOLO crop + MediaPipe skeleton ===")
-    print(f"Video : {video}")
-    print(f"Crops : {out_dir}")
+    print(f"Video  : {video}")
+    print(f"Run dir: {run_dir}")
+    print(f"Crops  : {out_dir}")
     if not args.no_preview:
         print(f"Preview: {preview_path}")
 

@@ -1,4 +1,4 @@
-"""Ve khung xuong len frame / crop — dung chung step2, step3, web demo."""
+"""Ve khung xuong len frame / crop — dung chung step2, step3."""
 from __future__ import annotations
 
 import cv2
@@ -101,15 +101,15 @@ def draw_skeleton_from_landmarks(
     return visible
 
 
-def draw_pipeline_legend(frame: np.ndarray) -> None:
+def draw_pipeline_legend(frame: np.ndarray, y: int = 50) -> None:
     """Ghi chu nho: pipeline skeleton-based."""
-    cv2.rectangle(frame, (10, 50), (340, 98), (20, 20, 20), -1)
-    cv2.circle(frame, (24, 66), 5, JOINT_COLOR, -1)
-    cv2.line(frame, (36, 66), (52, 66), BONE_COLOR, 2)
+    cv2.rectangle(frame, (10, y), (340, y + 48), (20, 20, 20), -1)
+    cv2.circle(frame, (24, y + 16), 5, JOINT_COLOR, -1)
+    cv2.line(frame, (36, y + 16), (52, y + 16), BONE_COLOR, 2)
     cv2.putText(
         frame,
         "Khung xuong (25 khop) -> ST-GCN",
-        (58, 70),
+        (58, y + 20),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.48,
         (220, 220, 220),
@@ -118,7 +118,7 @@ def draw_pipeline_legend(frame: np.ndarray) -> None:
     cv2.putText(
         frame,
         "Do: khop | Cam: xuong",
-        (58, 88),
+        (58, y + 38),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.42,
         (160, 160, 160),

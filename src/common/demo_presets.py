@@ -1,7 +1,7 @@
 """
 Cau hinh mac dinh duy nhat — uu tien chinh xac (detect + skeleton + hanh vi).
 
-Dung cho: step1, step2, step3, web demo.
+Dung cho: step1, step2, step3.
 Khong can chon nhieu mode — chi can chay script voi --video.
 """
 from __future__ import annotations

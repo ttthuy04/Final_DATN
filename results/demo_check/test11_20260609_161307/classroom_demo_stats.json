@@ -1,28 +1,28 @@
 {
   "video": "data\\raw\\test11.mp4",
   "stats_by_class": {
-    "normal": 7,
-    "sleep": 1,
-    "standing": 0,
-    "use_phone": 6
-  },
-  "stats_from_log": {
-    "normal": 7,
-    "sleep": 1,
-    "standing": 0,
-    "use_phone": 6
-  },
-  "stats_from_tracks": {
-    "normal": 9,
+    "normal": 8,
     "sleep": 0,
     "standing": 0,
     "use_phone": 5
+  },
+  "stats_from_log": {
+    "normal": 8,
+    "sleep": 0,
+    "standing": 0,
+    "use_phone": 5
+  },
+  "stats_from_tracks": {
+    "normal": 10,
+    "sleep": 0,
+    "standing": 0,
+    "use_phone": 3
   },
   "last_frame_counts": {
     "normal": 8,
     "use_phone": 2
   },
-  "total_students": 14,
+  "total_students": 13,
   "tracks_detected": 19,
   "frames_processed": 636,
   "class_names": [

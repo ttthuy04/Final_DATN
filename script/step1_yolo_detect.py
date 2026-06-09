@@ -52,6 +52,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 
 
+from src.common.demo_check_paths import make_demo_check_run_dir, step1_output_path
 from src.common.demo_presets import ACCURACY_YOLO_MODEL, accuracy_yolo_config
 from src.common.yolo_person_filter import (
     extract_person_boxes,
@@ -63,8 +64,6 @@ from src.common.yolo_person_filter import (
 
 DEFAULT_VIDEO = PROJECT_ROOT / "data" / "raw" / "test1.mp4"
 
-DEFAULT_OUT = PROJECT_ROOT / "results" / "demo_check" / "step1_yolo_output.mp4"
-
 
 
 
@@ -75,7 +74,14 @@ def parse_args():
 
     p.add_argument("--video", type=str, default=str(DEFAULT_VIDEO))
 
-    p.add_argument("--output", type=str, default=str(DEFAULT_OUT))
+    p.add_argument(
+        "--run-dir",
+        type=str,
+        default=None,
+        help="Thu muc ket qua (mac dinh: results/demo_check/<ten_video>_<timestamp>/)",
+    )
+
+    p.add_argument("--output", type=str, default=None, help="Ghi de duong dan video output")
 
     p.add_argument(
 
@@ -177,7 +183,15 @@ def main():
 
     video = Path(args.video)
 
-    out_path = Path(args.output)
+    if args.output:
+        out_path = Path(args.output)
+    elif args.run_dir:
+        run_dir = Path(args.run_dir)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        out_path = step1_output_path(run_dir)
+    else:
+        run_dir = make_demo_check_run_dir(video)
+        out_path = step1_output_path(run_dir)
 
 
 
@@ -191,6 +205,7 @@ def main():
     yolo_kw = yolo_predict_kwargs(yolo_cfg)
 
     print(f"Video  : {video}")
+    print(f"Run dir: {out_path.parent}")
     print(f"Model  : {args.model} | preset CHINH XAC | conf={yolo_cfg.conf} | imgsz={yolo_cfg.imgsz}")
 
     print(f"Detect : moi {args.detect_every} frame")

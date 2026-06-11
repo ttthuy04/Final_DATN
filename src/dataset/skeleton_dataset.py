@@ -11,7 +11,7 @@ SKELETON_DIR = PROJECT_ROOT / "data" / "skeleton"
 N_FRAMES = 60
 N_FEATURES = 100
 
-
+#load dataaset + chia train/val/test
 def _discover_classes():
     if not SKELETON_DIR.exists():
         raise FileNotFoundError(f"Khong tim thay thu muc: {SKELETON_DIR}")
@@ -66,7 +66,7 @@ def load_skeleton_data(skeleton_dir: Path = SKELETON_DIR):
 
 def get_dataloaders(
     batch_size: int = 32,
-    train_ratio: float = 0.7,
+    train_ratio: float = 0.7, #70% train, 15% val, 15% test
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
     random_state: int = 42,

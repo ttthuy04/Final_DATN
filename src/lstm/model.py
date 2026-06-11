@@ -9,7 +9,7 @@ class SkeletonLSTM(nn.Module):
         hidden_size: int = 128,
         num_layers: int = 2,
         num_classes: int = 4,
-        dropout: float = 0.3,
+        dropout: float = 0.3, #0.3 dropout de tranh overfitting
     ):
         super().__init__()
         self.lstm = nn.LSTM(

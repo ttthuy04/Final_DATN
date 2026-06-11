@@ -4,7 +4,6 @@ Ve bieu do training history tu training_log.csv.
 Usage:
     python src/common/plot_history.py --model lstm
     python src/common/plot_history.py --model stgcn
-    python src/common/plot_history.py --model agcn
 """
 
 import argparse
@@ -91,7 +90,7 @@ def main():
     parser = argparse.ArgumentParser(description="Ve training history tu CSV log")
     parser.add_argument(
         "--model",
-        choices=["lstm", "stgcn", "agcn"],
+        choices=["lstm", "stgcn"],
         default="lstm",
         help="Mo hinh can ve (mac dinh: lstm)",
     )

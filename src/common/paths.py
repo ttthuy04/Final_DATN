@@ -6,10 +6,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ModelPaths:
-    """Duong dan output cho tung thuat toan: lstm | stgcn | agcn."""
+    """Duong dan output cho tung thuat toan: lstm | stgcn."""
 
     def __init__(self, name: str):
-        if name not in ("lstm", "stgcn", "agcn"):
+        if name not in ("lstm", "stgcn"):
             raise ValueError(f"Model khong hop le: {name}")
         self.name = name
         self.results_dir = PROJECT_ROOT / "results" / name

@@ -14,8 +14,8 @@ import mediapipe as mp
 import numpy as np
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import PoseLandmarker, PoseLandmarkerOptions, RunningMode
-
-N_FRAMES_DEFAULT = 60
+#chuyen skeleton thanhf vector 
+N_FRAMES_DEFAULT = 60 
 N_LANDMARKS = 25
 N_FEATURES = N_LANDMARKS * 4  # 100
 

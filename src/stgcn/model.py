@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-NUM_JOINTS = 25
+NUM_JOINTS = 25 #25 joints
 NUM_COORDS = 2
 NUM_PARTITIONS = 3  # spatial configuration (Yan et al. 2018)
 LEFT_SHOULDER = 11

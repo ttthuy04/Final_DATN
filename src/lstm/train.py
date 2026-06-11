@@ -29,16 +29,16 @@ from src.lstm.model import SkeletonLSTM
 
 PATHS = ModelPaths("lstm")
 
-MAX_EPOCHS = 100
+MAX_EPOCHS = 100 #100 epochs
 BATCH_SIZE = 32
-LR = 1e-3
+LR = 1e-3 #1e-3 learning rate
 WEIGHT_DECAY = 1e-4
 HIDDEN_SIZE = 128
 NUM_LAYERS = 2
-DROPOUT = 0.3
+DROPOUT = 0.3 #0.3 dropout de tranh overfitting
 GRAD_CLIP = 1.0
-EARLY_STOP_PATIENCE = 15
-EARLY_STOP_MIN_DELTA = 0.001
+EARLY_STOP_PATIENCE = 15 #15 epoch  s
+EARLY_STOP_MIN_DELTA = 0.001 #0.001 delta de early stopping
 SCHEDULER_PATIENCE = 5
 SCHEDULER_FACTOR = 0.5
 MIN_LR = 1e-6

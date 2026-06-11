@@ -17,16 +17,13 @@ Student_Behavior_Recognition_v3/
 │   ├── dataset/                 # Loader skeleton
 │   ├── preprocess/              # Cắt video, extract skeleton
 │   ├── lstm/                    # Thuật toán 1: BiLSTM
-│   ├── stgcn/                   # Thuật toán 2: ST-GCN
-│   └── agcn/                    # Thuật toán 3: 2s-AGCN
+│   └── stgcn/                   # Thuật toán 2: ST-GCN
 ├── models_saved/                # Trọng số model (gitignore)
 │   ├── lstm/best.pt
-│   ├── stgcn/best.pt
-│   └── agcn/best.pt
+│   └── stgcn/best.pt
 ├── results/                     # Kết quả train & evaluate
 │   ├── lstm/
-│   ├── stgcn/
-│   └── agcn/
+│   └── stgcn/
 ├── requirements.txt
 └── README.md
 ```
@@ -67,12 +64,6 @@ python src/common/plot_history.py --model lstm
 python src/stgcn/train.py
 python src/stgcn/evaluate.py
 python src/common/plot_history.py --model stgcn
-
-# --- 2s-AGCN ---
-python src/agcn/train.py
-python src/agcn/evaluate.py
-python src/common/plot_history.py --model agcn
-python src/common/compare_models.py
 ```
 
 ## Output mỗi model

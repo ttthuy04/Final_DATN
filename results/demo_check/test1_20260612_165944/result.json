@@ -1,0 +1,134 @@
+{
+  "output_video": "C:\\Documen\\A_DATN\\Student_Behavior_Recognition_v3\\results\\demo_check\\test1_20260612_165944\\classroom_demo_final.mp4",
+  "class_names": [
+    "normal",
+    "sleep",
+    "standing",
+    "use_phone"
+  ],
+  "stats_by_class": {
+    "normal": 8,
+    "sleep": 1,
+    "standing": 0,
+    "use_phone": 3
+  },
+  "stats_table": [
+    [
+      "Binh thuong",
+      "normal",
+      8,
+      "66.7%"
+    ],
+    [
+      "Ngu gat",
+      "sleep",
+      1,
+      "8.3%"
+    ],
+    [
+      "Dung day",
+      "standing",
+      0,
+      "0.0%"
+    ],
+    [
+      "Dung dien thoai",
+      "use_phone",
+      3,
+      "25.0%"
+    ],
+    [
+      "Tong sinh vien",
+      "—",
+      12,
+      "100.0%"
+    ]
+  ],
+  "total_students": 12,
+  "tracks_detected": 17,
+  "frames_processed": 1132,
+  "elapsed_sec": 2462.61,
+  "last_frame_counts": {
+    "normal": 8,
+    "use_phone": 1,
+    "sleep": 1
+  },
+  "track_details": [
+    {
+      "track_id": 1,
+      "label": "normal",
+      "conf": 0.8035,
+      "pred_frames": 48
+    },
+    {
+      "track_id": 2,
+      "label": "use_phone",
+      "conf": 0.7694,
+      "pred_frames": 42
+    },
+    {
+      "track_id": 3,
+      "label": "normal",
+      "conf": 0.8797,
+      "pred_frames": 51
+    },
+    {
+      "track_id": 4,
+      "label": "normal",
+      "conf": 0.6146,
+      "pred_frames": 29
+    },
+    {
+      "track_id": 5,
+      "label": "normal",
+      "conf": 0.7654,
+      "pred_frames": 37
+    },
+    {
+      "track_id": 6,
+      "label": "normal",
+      "conf": 0.9156,
+      "pred_frames": 54
+    },
+    {
+      "track_id": 7,
+      "label": "sleep",
+      "conf": 0.8652,
+      "pred_frames": 49
+    },
+    {
+      "track_id": 8,
+      "label": "normal",
+      "conf": 0.7341,
+      "pred_frames": 46
+    },
+    {
+      "track_id": 10,
+      "label": "use_phone",
+      "conf": 0.5766,
+      "pred_frames": 2
+    },
+    {
+      "track_id": 11,
+      "label": "normal",
+      "conf": 0.8869,
+      "pred_frames": 13
+    },
+    {
+      "track_id": 14,
+      "label": "normal",
+      "conf": 0.8717,
+      "pred_frames": 44
+    },
+    {
+      "track_id": 54,
+      "label": "normal",
+      "conf": 0.9121,
+      "pred_frames": 3
+    }
+  ],
+  "run_name": "test1_20260612_165944",
+  "run_dir": "C:\\Documen\\A_DATN\\Student_Behavior_Recognition_v3\\results\\demo_check\\test1_20260612_165944",
+  "source_video": "test1.mp4",
+  "created_at": "2026-06-12T17:41:01"
+}

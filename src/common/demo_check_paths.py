@@ -40,3 +40,11 @@ def step2_paths(run_dir: Path) -> tuple[Path, Path]:
 
 def step3_output_path(run_dir: Path) -> Path:
     return run_dir / "classroom_demo_final.mp4"
+
+
+def input_video_path(run_dir: Path) -> Path:
+    return run_dir / "input_video.mp4"
+
+
+def result_json_path(run_dir: Path) -> Path:
+    return run_dir / "result.json"

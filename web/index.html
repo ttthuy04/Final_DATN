@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nhận diện hành vi sinh viên</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #1a2332;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --border: #e5e7eb;
+      --success: #16a34a;
+      --warning: #ea580c;
+      --danger: #dc2626;
+      --info: #0891b2;
+      --radius: 12px;
+      --shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    header h1 { font-size: 1.35rem; font-weight: 700; }
+    header p { font-size: 0.9rem; opacity: 0.9; margin-top: 0.25rem; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+      .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card h2 span {
+      font-size: 1.1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="file"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: #fff;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .checkbox-row input { width: auto; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: var(--text);
+    }
+
+    .btn-secondary:hover { background: #d1d5db; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .video-box {
+      background: #0f172a;
+      border-radius: 8px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .video-box video {
+      width: 100%;
+      max-height: 320px;
+      display: block;
+    }
+
+    .video-placeholder {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .progress-wrap {
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .progress-wrap.active { display: block; }
+
+    .progress-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .stat-card .icon { font-size: 1.5rem; }
+    .stat-card .count {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0.25rem 0;
+    }
+
+    .stat-card .label { font-size: 0.85rem; color: var(--muted); }
+
+    .stat-normal .count { color: var(--success); }
+    .stat-sleep .count { color: var(--danger); }
+    .stat-standing .count { color: var(--warning); }
+    .stat-phone .count { color: var(--info); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-normal { background: #dcfce7; color: #166534; }
+    .badge-sleep { background: #fee2e2; color: #991b1b; }
+    .badge-standing { background: #ffedd5; color: #9a3412; }
+    .badge-phone { background: #cffafe; color: #155e75; }
+
+    .summary-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .summary-item {
+      flex: 1;
+      min-width: 120px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+
+    .summary-item strong {
+      display: block;
+      font-size: 1.25rem;
+    }
+
+    .summary-item span {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 0.45rem 0.9rem;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .server-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .server-bar.ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .server-bar.err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    .server-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .server-dot.ok { background: #16a34a; }
+    .server-dot.err { background: #dc2626; }
+
+    .saved-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+
+    .saved-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      background: #fafafa;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .saved-card:hover { border-color: #93c5fd; }
+    .saved-card.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .saved-card h3 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      word-break: break-word;
+    }
+
+    .saved-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+
+    .saved-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .guide-list { padding-left: 1.25rem; margin-top: 0.5rem; }
+    .guide-list li { margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <h1>🎓 Hệ thống nhận diện hành vi sinh viên</h1>
+      <p>YOLOv8 → Skeleton (MediaPipe) → ST-GCN</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="serverBar" class="server-bar err">
+      <span><span class="server-dot err" id="serverDot"></span><span id="serverText">Đang kiểm tra server...</span></span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="saved">Kết quả đã lưu</button>
+      <button class="tab" data-tab="detail">Xem chi tiết</button>
+      <button class="tab" data-tab="analyze">Phân tích mới</button>
+      <button class="tab" data-tab="guide">Hướng dẫn</button>
+    </div>
+
+    <!-- Tab: Kết quả đã lưu -->
+    <section id="tab-saved" class="tab-panel active">
+      <div class="card">
+        <h2><span>💾</span> Kết quả đã lưu (demo_check)</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">
+          Mỗi lần phân tích được lưu vĩnh viễn trong <code>results/demo_check/</code>.
+          Lần sau chỉ cần mở giao diện và bấm <strong>Xem</strong> — không cần chạy lại AI.
+        </p>
+        <div id="savedGrid" class="saved-grid">
+          <p class="empty-state">Đang tải danh sách...</p>
+        </div>
+        <div class="actions" style="margin-top:1rem;">
+          <button class="btn btn-secondary" id="btnRefreshSaved">↻ Tải lại danh sách</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Phân tích -->
+    <section id="tab-analyze" class="tab-panel">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2><span>📁</span> Chọn video</h2>
+          <label for="videoInput">Tải video lớp học (.mp4)</label>
+          <input type="file" id="videoInput" accept="video/mp4,video/*">
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="drawSkeleton" checked>
+            <label for="drawSkeleton" style="margin:0;font-weight:400;">Vẽ khung xương (skeleton)</label>
+          </div>
+
+          <label for="maxFrames" style="margin-top:0.75rem;">Giới hạn số frame (0 = toàn bộ)</label>
+          <input type="number" id="maxFrames" value="0" min="0" step="1">
+
+          <div class="actions">
+            <button class="btn btn-primary" id="btnAnalyze" disabled>▶ Bắt đầu phân tích</button>
+            <button class="btn btn-secondary" id="btnReset">↺ Đặt lại</button>
+          </div>
+
+          <div class="progress-wrap" id="progressWrap">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">Đang xử lý...</p>
+          </div>
+
+          <div class="note">
+            Kết quả tự động lưu vào <code>results/demo_check/</code>.
+            Xem lại ở menu <strong>Kết quả đã lưu</strong>.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span>🎬</span> Video</h2>
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem;" id="videoLabel">Xem trước (input)</p>
+          <div class="video-box" id="previewBox">
+            <p class="video-placeholder" id="previewPlaceholder">Chưa chọn video</p>
+            <video id="previewVideo" controls hidden></video>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Chi tiết -->
+    <section id="tab-detail" class="tab-panel">
+      <p id="detailHint" class="empty-state" style="padding:1rem 0;">
+        Chọn một kết quả ở menu <strong>Kết quả đã lưu</strong> hoặc chạy phân tích mới.
+      </p>
+      <div class="summary-row" id="summaryRow" hidden>
+        <div class="summary-item">
+          <strong id="totalStudents">0</strong>
+          <span>Tổng sinh viên</span>
+        </div>
+        <div class="summary-item">
+          <strong id="tracksDetected">0</strong>
+          <span>Tracks phát hiện</span>
+        </div>
+        <div class="summary-item">
+          <strong id="elapsedTime">0s</strong>
+          <span>Thời gian xử lý</span>
+        </div>
+        <div class="summary-item">
+          <strong id="framesProcessed">0</strong>
+          <span>Frame đã xử lý</span>
+        </div>
+      </div>
+
+      <div class="grid grid-4" style="margin-bottom:1rem;">
+        <div class="card stat-card stat-normal">
+          <div class="icon">✅</div>
+          <div class="count" id="countNormal">0</div>
+          <div class="label">Bình thường</div>
+        </div>
+        <div class="card stat-card stat-sleep">
+          <div class="icon">😴</div>
+          <div class="count" id="countSleep">0</div>
+          <div class="label">Ngủ gật</div>
+        </div>
+        <div class="card stat-card stat-standing">
+          <div class="icon">🧍</div>
+          <div class="count" id="countStanding">0</div>
+          <div class="label">Đứng dậy</div>
+        </div>
+        <div class="card stat-card stat-phone">
+          <div class="icon">📱</div>
+          <div class="count" id="countPhone">0</div>
+          <div class="label">Dùng điện thoại</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem;">
+        <h2><span>📊</span> Bảng thống kê lớp (%)</h2>
+        <div id="statsTableWrap">
+          <p class="empty-state" id="statsTableEmpty">Chưa có dữ liệu.</p>
+          <table id="classStatsTable" hidden>
+            <thead>
+              <tr>
+                <th>Hành vi</th>
+                <th>Mã</th>
+                <th>Số SV</th>
+                <th>Tỷ lệ</th>
+              </tr>
+            </thead>
+            <tbody id="classStatsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem;">
+        <h2><span>👤</span> Chi tiết theo track</h2>
+        <div id="tableWrap">
+          <p class="empty-state" id="tableEmpty">Chưa có dữ liệu. Hãy phân tích video trước.</p>
+          <table id="statsTable" hidden>
+            <thead>
+              <tr>
+                <th>Track ID</th>
+                <th>Hành vi chính</th>
+                <th>Độ tin cậy</th>
+                <th>Lần dự đoán</th>
+              </tr>
+            </thead>
+            <tbody id="statsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span>🎥</span> Video kết quả (demo_check)</h2>
+        <div class="video-box" style="min-height:360px;">
+          <p class="video-placeholder" id="outputPlaceholder">Chưa có video output</p>
+          <p class="video-placeholder" id="outputLoading" hidden>Đang tải video...</p>
+          <video id="outputVideo" controls playsinline preload="metadata" hidden style="max-height:480px;"></video>
+        </div>
+        <div class="actions" style="margin-top:0.75rem;">
+          <a class="btn btn-secondary" id="outputDownload" href="#" hidden download>Tải video</a>
+        </div>
+        <p class="progress-text" id="runDirInfo" style="margin-top:0.5rem;"></p>
+        <p class="progress-text" id="outputError" style="color:var(--danger);"></p>
+      </div>
+    </section>
+
+    <!-- Tab: Hướng dẫn -->
+    <section id="tab-guide" class="tab-panel">
+      <div class="card">
+        <h2><span>📖</span> Cách sử dụng</h2>
+        <ol class="guide-list">
+          <li><strong>Lần đầu:</strong> chạy <code>python web/server.py</code> rồi mở <code>http://127.0.0.1:5050</code>.</li>
+          <li><strong>Phân tích mới:</strong> menu «Phân tích mới» → chọn video → «Bắt đầu phân tích».</li>
+          <li><strong>Xem lại:</strong> menu «Kết quả đã lưu» → bấm «Xem» (không cần chạy lại AI).</li>
+          <li><strong>Chi tiết:</strong> thống kê + video output ở menu «Xem chi tiết».</li>
+        </ol>
+      </div>
+      <div class="card" style="margin-top:1rem;">
+        <h2><span>⚙️</span> Pipeline</h2>
+        <p style="font-size:0.9rem;">YOLOv8m → Skeleton (MediaPipe) → ST-GCN — preset chính xác, giống <code>step3_classroom_demo.py</code>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Student Behavior Recognition v3 — Đồ án tốt nghiệp
+  </footer>
+
+  <script>
+    const LABELS = {
+      normal: { vi: "Bình thường", badge: "badge-normal" },
+      sleep: { vi: "Ngủ gật", badge: "badge-sleep" },
+      standing: { vi: "Đứng dậy", badge: "badge-standing" },
+      use_phone: { vi: "Dùng điện thoại", badge: "badge-phone" },
+    };
+
+    const videoInput = document.getElementById("videoInput");
+    const previewVideo = document.getElementById("previewVideo");
+    const previewPlaceholder = document.getElementById("previewPlaceholder");
+    const outputVideo = document.getElementById("outputVideo");
+    const outputPlaceholder = document.getElementById("outputPlaceholder");
+    const outputLoading = document.getElementById("outputLoading");
+    const outputDownload = document.getElementById("outputDownload");
+    const outputError = document.getElementById("outputError");
+    const btnAnalyze = document.getElementById("btnAnalyze");
+    const btnReset = document.getElementById("btnReset");
+    const progressWrap = document.getElementById("progressWrap");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+
+    let selectedFile = null;
+    let currentRunName = null;
+    let savedRuns = [];
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.tab === name);
+      });
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      document.getElementById("tab-" + name).classList.add("active");
+    }
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        switchTab(tab.dataset.tab);
+        if (tab.dataset.tab === "saved") loadSavedRuns(false);
+      });
+    });
+
+    async function checkServer() {
+      const bar = document.getElementById("serverBar");
+      const dot = document.getElementById("serverDot");
+      const text = document.getElementById("serverText");
+      try {
+        const res = await fetch("/api/health");
+        const data = await res.json();
+        if (!res.ok) throw new Error("offline");
+        bar.className = "server-bar ok";
+        dot.className = "server-dot ok";
+        text.textContent = "Server đang chạy · " + (data.saved_runs || 0) + " kết quả đã lưu";
+        return data;
+      } catch {
+        bar.className = "server-bar err";
+        dot.className = "server-dot err";
+        text.textContent = "Server chưa chạy — chạy python web/server.py để khởi động";
+        return null;
+      }
+    }
+
+    videoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      selectedFile = file;
+      previewVideo.src = URL.createObjectURL(file);
+      previewVideo.hidden = false;
+      previewPlaceholder.hidden = true;
+      document.getElementById("videoLabel").textContent = "Xem trước (input): " + file.name;
+      btnAnalyze.disabled = false;
+    });
+
+    btnReset.addEventListener("click", () => {
+      videoInput.value = "";
+      selectedFile = null;
+      previewVideo.src = "";
+      previewVideo.hidden = true;
+      previewPlaceholder.hidden = false;
+      document.getElementById("videoLabel").textContent = "Xem trước (input)";
+      btnAnalyze.disabled = true;
+      progressWrap.classList.remove("active");
+      progressFill.style.width = "0%";
+    });
+
+    btnAnalyze.addEventListener("click", async () => {
+      if (!selectedFile) return;
+
+      btnAnalyze.disabled = true;
+      progressWrap.classList.add("active");
+      progressFill.style.width = "0%";
+      progressText.textContent = "Đang tải video lên server...";
+
+      try {
+        const form = new FormData();
+        form.append("video", selectedFile);
+        form.append("draw_skeleton", document.getElementById("drawSkeleton").checked ? "true" : "false");
+        form.append("max_frames", document.getElementById("maxFrames").value || "0");
+
+        const res = await fetch("/api/analyze", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Không gửi được video");
+
+        await pollJob(data.job_id);
+        await loadSavedRuns(false);
+        switchTab("detail");
+      } catch (err) {
+        progressText.textContent = "Lỗi: " + err.message;
+        const health = await checkServer();
+        if (!health) {
+          progressText.textContent += " — Hãy chạy python web/server.py";
+        }
+      } finally {
+        btnAnalyze.disabled = false;
+      }
+    });
+
+    function sleep(ms) {
+      return new Promise((r) => setTimeout(r, ms));
+    }
+
+    async function pollJob(jobId) {
+      while (true) {
+        const res = await fetch("/api/jobs/" + jobId);
+        const job = await res.json();
+        if (!res.ok) throw new Error(job.error || "Mất kết nối job");
+
+        progressFill.style.width = (job.progress || 0) + "%";
+        progressText.textContent = (job.message || "Đang xử lý...") + " (" + (job.progress || 0).toFixed(0) + "%)";
+
+        if (job.status === "done") {
+          showStats(job.result);
+          progressText.textContent = "Hoàn thành!";
+          return;
+        }
+        if (job.status === "error") {
+          throw new Error(job.error || job.message || "Phân tích thất bại");
+        }
+        await sleep(1500);
+      }
+    }
+
+    function showStats(result) {
+      document.getElementById("detailHint").hidden = true;
+      if (result.run_name) {
+        currentRunName = result.run_name;
+        localStorage.setItem("sbr_last_run", result.run_name);
+        highlightSavedCard(result.run_name);
+      }
+
+      const counts = result.stats_by_class || {};
+      document.getElementById("summaryRow").hidden = false;
+      document.getElementById("totalStudents").textContent = result.total_students ?? 0;
+      document.getElementById("tracksDetected").textContent = result.tracks_detected ?? 0;
+      document.getElementById("elapsedTime").textContent = Math.round(result.elapsed_sec ?? 0) + "s";
+      document.getElementById("framesProcessed").textContent = result.frames_processed ?? 0;
+
+      document.getElementById("countNormal").textContent = counts.normal ?? 0;
+      document.getElementById("countSleep").textContent = counts.sleep ?? 0;
+      document.getElementById("countStanding").textContent = counts.standing ?? 0;
+      document.getElementById("countPhone").textContent = counts.use_phone ?? 0;
+
+      const classBody = document.getElementById("classStatsBody");
+      classBody.innerHTML = "";
+      const table = result.stats_table || [];
+      table.forEach((row) => {
+        const tr = document.createElement("tr");
+        const cls = row[1];
+        const badge = LABELS[cls] ? ` <span class="badge ${LABELS[cls].badge}">${row[0]}</span>` : row[0];
+        tr.innerHTML = `<td>${badge}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td>`;
+        classBody.appendChild(tr);
+      });
+      document.getElementById("statsTableEmpty").hidden = table.length > 0;
+      document.getElementById("classStatsTable").hidden = table.length === 0;
+
+      const tbody = document.getElementById("statsBody");
+      tbody.innerHTML = "";
+      const tracks = result.track_details || [];
+      tracks.forEach((t) => {
+        const info = LABELS[t.label] || { vi: t.label, badge: "" };
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>#${t.track_id}</td>
+          <td><span class="badge ${info.badge}">${info.vi}</span></td>
+          <td>${(t.conf * 100).toFixed(0)}%</td>
+          <td>${t.pred_frames ?? 0}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("tableEmpty").hidden = tracks.length > 0;
+      document.getElementById("statsTable").hidden = tracks.length === 0;
+
+      showOutputVideo(result);
+      document.getElementById("runDirInfo").textContent =
+        "Thư mục: results/demo_check/" + (result.run_name || "");
+    }
+
+    function showOutputVideo(result) {
+      outputError.textContent = "";
+      const url = result.output_video_url;
+      if (!url) {
+        outputVideo.hidden = true;
+        outputLoading.hidden = true;
+        outputPlaceholder.hidden = false;
+        outputPlaceholder.textContent = "Không tìm thấy file video output.";
+        outputDownload.hidden = true;
+        return;
+      }
+
+      const cacheBust = url + "?t=" + Date.now();
+      outputPlaceholder.hidden = true;
+      outputLoading.hidden = false;
+      outputVideo.hidden = true;
+      outputDownload.hidden = false;
+      outputDownload.href = cacheBust;
+      outputDownload.download = (result.run_name || "output") + ".mp4";
+
+      outputVideo.onloadeddata = () => {
+        outputLoading.hidden = true;
+        outputVideo.hidden = false;
+      };
+      outputVideo.onerror = () => {
+        outputLoading.hidden = true;
+        outputVideo.hidden = true;
+        outputError.textContent =
+          "Trình duyệt không phát được video. Hãy bấm «Tải video» hoặc chạy lại phân tích.";
+      };
+
+      outputVideo.src = cacheBust;
+      outputVideo.load();
+    }
+
+    function highlightSavedCard(runName) {
+      document.querySelectorAll(".saved-card").forEach((c) => {
+        c.classList.toggle("active", c.dataset.run === runName);
+      });
+    }
+
+    function renderSavedCards(list) {
+      const grid = document.getElementById("savedGrid");
+      if (!list.length) {
+        grid.innerHTML = '<p class="empty-state">Chưa có kết quả. Vào «Phân tích mới» để chạy lần đầu.</p>';
+        return;
+      }
+
+      grid.innerHTML = list.map((h) => {
+        const c = h.stats_by_class || {};
+        return `
+          <div class="saved-card${h.run_name === currentRunName ? " active" : ""}" data-run="${h.run_name}">
+            <h3>${escapeHtml(h.source_video || h.run_name)}</h3>
+            <div class="saved-meta">
+              ${formatTime(h.created_at)}<br>
+              ${h.total_students ?? 0} sinh viên · ${Math.round(h.elapsed_sec ?? 0)}s xử lý
+            </div>
+            <div class="saved-tags">
+              <span class="badge badge-normal">BT: ${c.normal ?? 0}</span>
+              <span class="badge badge-sleep">Ngủ: ${c.sleep ?? 0}</span>
+              <span class="badge badge-standing">Đứng: ${c.standing ?? 0}</span>
+              <span class="badge badge-phone">ĐT: ${c.use_phone ?? 0}</span>
+            </div>
+            <button class="btn btn-primary btn-view-saved" data-run="${h.run_name}">▶ Xem</button>
+          </div>
+        `;
+      }).join("");
+
+      grid.querySelectorAll(".btn-view-saved").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          viewRun(btn.dataset.run, btn);
+        });
+      });
+      grid.querySelectorAll(".saved-card").forEach((card) => {
+        card.addEventListener("click", () => viewRun(card.dataset.run));
+      });
+    }
+
+    async function viewRun(runName, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Đang tải...";
+      }
+      try {
+        const r = await fetch("/api/runs/" + runName);
+        const payload = await r.json();
+        if (!r.ok) {
+          alert(payload.error || "Không tải được kết quả");
+          return;
+        }
+        showStats(payload);
+        switchTab("detail");
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "▶ Xem";
+        }
+      }
+    }
+
+    async function loadSavedRuns(autoViewLatest) {
+      const grid = document.getElementById("savedGrid");
+      const health = await checkServer();
+      if (!health) {
+        grid.innerHTML = '<p class="empty-state">Server chưa chạy. Chạy <code>python web/server.py</code> rồi tải lại trang.</p>';
+        return [];
+      }
+
+      try {
+        const res = await fetch("/api/runs");
+        const data = await res.json();
+        savedRuns = data.runs || [];
+        renderSavedCards(savedRuns);
+
+        if (autoViewLatest && savedRuns.length) {
+          const last = localStorage.getItem("sbr_last_run");
+          const target = savedRuns.find((r) => r.run_name === last) || savedRuns[0];
+          await viewRun(target.run_name);
+        }
+        return savedRuns;
+      } catch {
+        grid.innerHTML = '<p class="empty-state">Không tải được danh sách. Thử bấm «Tải lại».</p>';
+        return [];
+      }
+    }
+
+    function formatTime(iso) {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleString("vi-VN");
+      } catch {
+        return iso;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    document.getElementById("btnRefreshSaved").addEventListener("click", () => loadSavedRuns(false));
+
+    (async function init() {
+      await loadSavedRuns(true);
+    })();
+  </script>
+</body>
+</html>

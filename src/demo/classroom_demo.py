@@ -109,17 +109,20 @@ class DemoResult:
     frames_processed: int
     elapsed_sec: float
     last_frame_counts: dict[str, int] = field(default_factory=dict)
+    track_details: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
             "output_video": str(self.output_video),
             "class_names": self.class_names,
             "stats_by_class": self.stats_by_class,
+            "stats_table": self.stats_table,
             "total_students": self.total_students,
             "tracks_detected": self.tracks_detected,
             "frames_processed": self.frames_processed,
             "elapsed_sec": round(self.elapsed_sec, 2),
             "last_frame_counts": self.last_frame_counts,
+            "track_details": self.track_details,
         }
 
 
@@ -307,6 +310,31 @@ def aggregate_stats_from_log(
     return counts
 
 
+def build_track_details(
+    tracks: dict[int, TrackState],
+    log_rows: list[dict],
+) -> list[dict]:
+    """Tom tat tung track: nhan on dinh + so lan du doan trong log."""
+    pred_frames: dict[int, int] = defaultdict(int)
+    for row in log_rows:
+        pred_frames[int(row["track_id"])] += 1
+
+    details: list[dict] = []
+    for tid, tr in sorted(tracks.items()):
+        if not tr.label:
+            continue
+        display_id = tid if tid < 10000 else tid - 10000
+        details.append(
+            {
+                "track_id": display_id,
+                "label": tr.label,
+                "conf": round(tr.conf, 4),
+                "pred_frames": pred_frames.get(tid, 0),
+            }
+        )
+    return details
+
+
 def build_stats_table(
     stats: dict[str, int], class_names: list[str]
 ) -> tuple[list[list], int]:
@@ -487,6 +515,7 @@ def run_classroom_demo(
     stats_tracks = aggregate_stats_from_tracks(tracks, class_names)
     stats_by_class = stats_log if sum(stats_log.values()) > 0 else stats_tracks
     stats_table, total_students = build_stats_table(stats_by_class, class_names)
+    track_details = build_track_details(tracks, log_rows)
 
     elapsed = time.time() - t0
     _report_progress(progress, 1.0, "Hoan thanh!")
@@ -501,4 +530,5 @@ def run_classroom_demo(
         frames_processed=frame_idx,
         elapsed_sec=elapsed,
         last_frame_counts=last_frame_counts,
+        track_details=track_details,
     )

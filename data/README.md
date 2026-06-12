@@ -27,7 +27,3 @@ data/
 - Sao lưu `data/` bằng ổ cứng ngoài, NAS, OneDrive/Google Drive, hoặc bản sao trên máy khác.
 - Trong báo cáo/đồ án: ghi rõ nguồn dataset và đường dẫn lưu trữ ngoài repo.
 
-## Lưu ý
-
-- Không commit file `.mp4`, weight model (`.pth`, `.pt`, …) vào Git.
-- Nếu chia sẻ dataset cho người khác, dùng link Drive/Kaggle kèm hướng dẫn đặt vào đúng thư mục trên.

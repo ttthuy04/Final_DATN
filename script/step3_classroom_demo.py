@@ -15,6 +15,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.common.demo_check_paths import make_demo_check_run_dir, step3_output_path
 from src.common.demo_presets import ACCURACY_YOLO_MODEL, accuracy_yolo_config
+from src.common.demo_result_io import save_demo_result
 from src.demo.classroom_demo import DemoConfig, run_classroom_demo
 
 DEFAULT_VIDEO = PROJECT_ROOT / "data" / "raw" / "test1.mp4"
@@ -81,6 +82,7 @@ def main():
             print(f"  [{frac * 100:.0f}%] {msg}", flush=True)
 
     result = run_classroom_demo(cfg, progress=on_progress)
+    save_demo_result(run_dir, result, source_video=str(cfg.video_path.name))
 
     print(f"\nHoan thanh trong {result.elapsed_sec:.0f}s")
     print(f"Video : {result.output_video}")

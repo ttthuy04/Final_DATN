@@ -7,9 +7,9 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SKELETON_DIR = PROJECT_ROOT / "data" / "skeleton"
-N_FRAMES = 60
-N_FEATURES = 100
+SKELETON_DIR = PROJECT_ROOT / "data" / "skeleton" # đường dẫn đến thư mục skeleton
+N_FRAMES = 60 # 60 frame
+N_FEATURES = 100 # 100 features
 
 #load dataaset + chia train/val/test
 def _discover_classes():
@@ -24,12 +24,12 @@ def _discover_classes():
 
 
 CLASS_NAMES = _discover_classes()
-LABEL_TO_IDX = {name: i for i, name in enumerate(CLASS_NAMES)}
+LABEL_TO_IDX = {name: i for i, name in enumerate(CLASS_NAMES)} # đổi nhãn thành index
 
 
 class SkeletonDataset(Dataset):
     def __init__(self, X: np.ndarray, y: np.ndarray):
-        self.X = torch.tensor(X, dtype=torch.float32)
+        self.X = torch.tensor(X, dtype=torch.float32) # chuyển dữ liệu numpy sang tensor
         self.y = torch.tensor(y, dtype=torch.long)
 
     def __len__(self):
@@ -38,11 +38,11 @@ class SkeletonDataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
 
-
+#gom toàn bộ file numpy thành X (N, 60, 100), y (N,)
 def load_skeleton_data(skeleton_dir: Path = SKELETON_DIR):
     """Doc tat ca file .npy -> X (N, 60, 100), y (N,)."""
     X_list, y_list, paths = [], [], []
-
+#X : dl skeleton , y: dl nhãn số, paths: dl đường dẫn file numpy
     for label in CLASS_NAMES:
         label_dir = skeleton_dir / label
         if not label_dir.is_dir():
@@ -62,12 +62,12 @@ def load_skeleton_data(skeleton_dir: Path = SKELETON_DIR):
     X = np.stack(X_list, axis=0)
     y = np.array(y_list, dtype=np.int64)
     return X, y, paths
-
+#chia dl
 
 def get_dataloaders(
     batch_size: int = 32,
     train_ratio: float = 0.7, #70% train, 15% val, 15% test
-    val_ratio: float = 0.15,
+    val_ratio: float = 0.15, #15% val, 15% test
     test_ratio: float = 0.15,
     random_state: int = 42,
 ):
@@ -79,17 +79,17 @@ def get_dataloaders(
         X,
         y,
         paths,
-        test_size=(1 - train_ratio),
+        test_size=(1 - train_ratio), # 30% test, 70% train
         stratify=y,
         random_state=random_state,
     )
 
-    val_share = val_ratio / (val_ratio + test_ratio)
+    val_share = val_ratio / (val_ratio + test_ratio) # 0,15 / (0,15 + 0,15) = 0,5
     X_val, X_test, y_val, y_test, paths_val, paths_test = train_test_split(
         X_temp,
         y_temp,
         paths_temp,
-        test_size=(1 - val_share),
+        test_size=(1 - val_share), # 0,5 test, 0,5 val của 0,3 
         stratify=y_temp,
         random_state=random_state,
     )

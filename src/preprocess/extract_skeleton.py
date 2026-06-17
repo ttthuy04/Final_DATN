@@ -15,9 +15,9 @@ import numpy as np
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import PoseLandmarker, PoseLandmarkerOptions, RunningMode
 #chuyen skeleton thanhf vector 
-N_FRAMES_DEFAULT = 60 
+N_FRAMES_DEFAULT = 60 # mỗi video lấ 60 frame
 N_LANDMARKS = 25
-N_FEATURES = N_LANDMARKS * 4  # 100
+N_FEATURES = N_LANDMARKS * 4  # 100 = 25 landmark * 4 (x, y, z, visibility)
 
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/"
@@ -41,25 +41,25 @@ def create_pose_landmarker(model_path: Path) -> PoseLandmarker:
     options = PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path)),
         running_mode=RunningMode.VIDEO,
-        num_poses=1,
+        num_poses=1, #phát hiện 1 người trong video
         min_pose_detection_confidence=0.5,
         min_pose_presence_confidence=0.5,
         min_tracking_confidence=0.5,
     )
     return PoseLandmarker.create_from_options(options)
 
-
+#chuyển landmarks thành vector SỐ 
 def landmarks_to_vector(landmarks) -> list[float]:
     vec = []
-    for i in range(N_LANDMARKS):
+    for i in range(N_LANDMARKS): #25
         lm = landmarks[i]
         visibility = getattr(lm, "visibility", None)
         if visibility is None:
             visibility = getattr(lm, "presence", 1.0)
-        vec.extend([lm.x, lm.y, lm.z, float(visibility)])
+        vec.extend([lm.x, lm.y, lm.z, float(visibility)]) #x, y, z, visibility
     return vec
 
-
+# biến video thành ma trận numpy (60,100) 
 def extract_landmarks_from_video(
     video_path: str | Path,
     model_path: Path,
@@ -71,29 +71,29 @@ def extract_landmarks_from_video(
     sequence = []
 
     try:
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps <= 0 or fps != fps:
+        fps = cap.get(cv2.CAP_PROP_FPS) # fps của video
+        if fps <= 0 or fps != fps: # nếu fps không hợp lệ thì set fps = 30.0
             fps = 30.0
 
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) # tổng số frame của video
         if total_frames < n_frames:
-            skip_frames = 1
+            skip_frames = 1 # nếu tổng số frame ít hơn 60 thì skip 1 frame
         else:
-            skip_frames = total_frames // n_frames
+            skip_frames = total_frames // n_frames # nếu tổng số frame lớn hơn 60 thì skip n frame (60/60 = 1)
         if skip_frames == 0:
-            skip_frames = 1
+            skip_frames = 1 # nếu skip_frames = 0 thì set skip_frames = 1
 
-        count = 0
+        count = 0 # đếm số frame đã skip
         sample_idx = 0
         ms_step = max(int(1000 / fps), 1)
 
         while cap.isOpened() and len(sequence) < n_frames:
-            ret, frame = cap.read()
+            ret, frame = cap.read() # đọc frame tiếp theo
             if not ret:
                 break
 
-            if count % skip_frames == 0:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            if count % skip_frames == 0: # chỉ xử lý frame dc chọn
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # chuyển frame từ BGR sang RGB
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
                 timestamp_ms = sample_idx * ms_step
                 sample_idx += 1
@@ -104,7 +104,7 @@ def extract_landmarks_from_video(
                 elif sequence:
                     sequence.append(sequence[-1])
                 else:
-                    sequence.append([0.0] * N_FEATURES)
+                    sequence.append([0.0] * N_FEATURES) # nếu không detect dc thì thêm vector 0
 
             count += 1
     finally:
@@ -112,11 +112,11 @@ def extract_landmarks_from_video(
         landmarker.close()
 
     while len(sequence) < n_frames:
-        sequence.append([0.0] * N_FEATURES)
+        sequence.append([0.0] * N_FEATURES) # nếu số frame ít hơn 60 thì thêm vector 0
 
     return np.array(sequence, dtype=np.float32)
 
-
+# xử lý hết all nhãn
 def process_all(
     labeled_dir: Path,
     skeleton_dir: Path,

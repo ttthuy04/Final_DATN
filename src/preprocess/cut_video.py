@@ -10,7 +10,7 @@ def get_next_index(save_dir, label):
     Tìm index tiếp theo dựa trên các file đã có trong thư mục con của nhãn.
     Ví dụ: đã có sleep/sleep_1.mp4, thì sẽ trả về 2.
     """
-    label_dir = os.path.join(save_dir, label)
+    label_dir = os.path.join(save_dir, label) # tìm đường dẫn 
     if not os.path.exists(label_dir):
         return 1
 
@@ -28,7 +28,7 @@ def get_next_index(save_dir, label):
         except ValueError:
             pass
 
-    return max(indices) + 1 if indices else 1
+    return max(indices) + 1 if indices else 1 # tìm index lớn nhất + 1 nếu có, nếu không thì trả về 1
 
 
 def main(video_path, save_dir="data/labeled"):

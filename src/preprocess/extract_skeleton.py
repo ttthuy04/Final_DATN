@@ -25,7 +25,7 @@ MODEL_URL = (
 )
 MODEL_NAME = "pose_landmarker_lite.task"
 
-
+#kiểm tra xem có model mediapipe chưa
 def get_model_path(project_root: Path) -> Path:
     model_dir = project_root / "models"
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -36,12 +36,12 @@ def get_model_path(project_root: Path) -> Path:
         print(f"Da luu model tai: {model_path}")
     return model_path
 
-
+#tạo bộ phát hiện pose của mediapipe
 def create_pose_landmarker(model_path: Path) -> PoseLandmarker:
     options = PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path)),
         running_mode=RunningMode.VIDEO,
-        num_poses=1, #phát hiện 1 người trong video
+        num_poses=1, #phát  hiện 1 người trong video
         min_pose_detection_confidence=0.5,
         min_pose_presence_confidence=0.5,
         min_tracking_confidence=0.5,
@@ -57,7 +57,7 @@ def landmarks_to_vector(landmarks) -> list[float]:
         if visibility is None:
             visibility = getattr(lm, "presence", 1.0)
         vec.extend([lm.x, lm.y, lm.z, float(visibility)]) #x, y, z, visibility
-    return vec
+    return vec #100 = 25 landmark * 4 (x, y, z, visibility)
 
 # biến video thành ma trận numpy (60,100) 
 def extract_landmarks_from_video(
@@ -100,11 +100,11 @@ def extract_landmarks_from_video(
                 results = landmarker.detect_for_video(mp_image, timestamp_ms)
 
                 if results.pose_landmarks:
-                    sequence.append(landmarks_to_vector(results.pose_landmarks[0]))
+                    sequence.append(landmarks_to_vector(results.pose_landmarks[0])) # phát hiện hợp lệ
                 elif sequence:
-                    sequence.append(sequence[-1])
-                else:
-                    sequence.append([0.0] * N_FEATURES) # nếu không detect dc thì thêm vector 0
+                    sequence.append(sequence[-1]) # nếu không detect dc thì thêm vector của frame trước
+                else:       
+                    sequence.append([0.0] * N_FEATURES) # nếu    không detect dc thì thêm vector 0
 
             count += 1
     finally:

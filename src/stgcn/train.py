@@ -1,11 +1,9 @@
 """
 Train ST-GCN theo bai bao Yan et al. AAAI 2018 + cai tien da chung minh:
-- Spatial configuration partitioning (3 subgraph)
-- Learnable edge importance M
-- Velocity + root normalization
-- Custom class weights
-
-Chay: python src/stgcn/train.py
+-dùng 3 graph: self, inward, outward
+-học trọng số cạnh M
+-có thêm volocity và root normalization
+-CÓ CLASS WEIGHT ĐỂ XỬ LÝ LỆCH KHỚP 
 """
 
 import sys
@@ -16,9 +14,8 @@ import torch
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.common.paths import ModelPaths
-from src.dataset.skeleton_dataset import CLASS_NAMES, get_dataloaders
-from src.stgcn.model import SkeletonSTGCN
+from src.common.paths import ModelPaths #đường dẫn lưu model và log
+from src.dataset.skeleton_dataset import CLASS_NAMES, get_dataloaders #
 from src.stgcn.train_loop import BATCH_SIZE, DROPOUT, get_device, train_stgcn
 
 PATHS = ModelPaths("stgcn")
@@ -38,7 +35,7 @@ def main():
     print(f"Device: {device}", flush=True)
     print(f"Classes ({len(CLASS_NAMES)}): {CLASS_NAMES}", flush=True)
 
-    train_loader, val_loader, _, info = get_dataloaders(batch_size=BATCH_SIZE)
+    train_loader, val_loader, _, info = get_dataloaders(batch_size=BATCH_SIZE) #lấy dữ liệu train/val/test nhủng bỏ testloader
     print(
         f"Split -> train: {info['train']} | val: {info['val']} | test: {info['test']}",
         flush=True,
@@ -47,22 +44,22 @@ def main():
     missing = [c for c in CLASS_NAMES if c not in WEIGHT_BY_CLASS]
     if missing:
         raise ValueError(f"Thieu class weight cho: {missing}")
-    weight_list = [WEIGHT_BY_CLASS[c] for c in CLASS_NAMES]
-    class_weights = torch.tensor(weight_list, dtype=torch.float32)
+    weight_list = [WEIGHT_BY_CLASS[c] for c in CLASS_NAMES] #tạo list trọng số cho từng class
+    class_weights = torch.tensor(weight_list, dtype=torch.float32) #đổi thành tensor
     print(f"Class weights: {dict(zip(CLASS_NAMES, weight_list))}", flush=True)
 
     model = SkeletonSTGCN(
-        num_classes=len(CLASS_NAMES),
+        num_classes=len(CLASS_NAMES), #4 hành vi
         use_velocity=True,
-        normalize_root=True,
-        use_spatial_partition=True,
-        dropout=DROPOUT,
+        normalize_root=True, # chuẩn hóa tọa độ trung tâm của vai
+        use_spatial_partition=True, # sử dụng spatial configuration partitioning
+        dropout=DROPOUT, # dropout để tránh overfitting
     ).to(device)
     print(
         f"Input channels: {model.in_channels} | Params: {model.count_parameters():,}",
         flush=True,
     )
-
+# bắt đầu huấn luyện
     best = train_stgcn(
         model,
         train_loader,

@@ -23,15 +23,15 @@ def _discover_classes():
     return classes
 
 
-CLASS_NAMES = _discover_classes()
-LABEL_TO_IDX = {name: i for i, name in enumerate(CLASS_NAMES)} # đổi nhãn thành index
+CLASS_NAMES = _discover_classes() # danh sách các nhãn
+LABEL_TO_IDX = {name: i for i, name in enumerate(CLASS_NAMES)} # đổi nhãn thành index (0, 1, 2, 3)
 
-
+#biến dữ liệu thành dạng pytourch có thể train
 class SkeletonDataset(Dataset):
     def __init__(self, X: np.ndarray, y: np.ndarray):
-        self.X = torch.tensor(X, dtype=torch.float32) # chuyển dữ liệu numpy sang tensor
+        self.X = torch.tensor(X, dtype=torch.float32) # chuyển dữ liệu numpy sang pytourch tensor
         self.y = torch.tensor(y, dtype=torch.long)
-
+# X là dữ liệu skeleton , y là nhãn số
     def __len__(self):
         return len(self.y)
 
@@ -69,18 +69,18 @@ def get_dataloaders(
     train_ratio: float = 0.7, #70% train, 15% val, 15% test
     val_ratio: float = 0.15, #15% val, 15% test
     test_ratio: float = 0.15,
-    random_state: int = 42,
+    random_state: int = 42, # random state để chia dữ liệu giống nhau
 ):
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6
 
     X, y, paths = load_skeleton_data()
-
+#chia lần 1
     X_train, X_temp, y_train, y_temp, paths_train, paths_temp = train_test_split(
         X,
         y,
         paths,
         test_size=(1 - train_ratio), # 30% test, 70% train
-        stratify=y,
+        stratify=y, 
         random_state=random_state,
     )
 
@@ -93,15 +93,15 @@ def get_dataloaders(
         stratify=y_temp,
         random_state=random_state,
     )
-
+#(32,60,100)
     train_loader = DataLoader(
-        SkeletonDataset(X_train, y_train), batch_size=batch_size, shuffle=True
+        SkeletonDataset(X_train, y_train), batch_size=batch_size, shuffle=True # shuffle=True để trộn dữ liệu
     )
-    val_loader = DataLoader(SkeletonDataset(X_val, y_val), batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(SkeletonDataset(X_val, y_val), batch_size=batch_size, shuffle=False) # shuffle=False để không trộn dữ liệu
     test_loader = DataLoader(
-        SkeletonDataset(X_test, y_test), batch_size=batch_size, shuffle=False
+        SkeletonDataset(X_test, y_test), batch_size=batch_size, shuffle=False # shuffle=False để không trộn dữ liệu
     )
-
+#thông tin chia dữ liệu
     split_info = {
         "total": len(y),
         "train": len(y_train),

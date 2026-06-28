@@ -7,7 +7,9 @@ Chay:
 """
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 import threading
 import uuid
 from pathlib import Path
@@ -19,11 +21,15 @@ from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from src.common.demo_check_paths import (
     DEMO_CHECK_ROOT,
-    input_video_path,
     make_demo_check_run_dir,
     step3_output_path,
 )
-from src.common.demo_result_io import list_demo_runs, load_demo_result, result_for_api
+from src.common.demo_result_io import (
+    finalize_web_run_dir,
+    list_demo_runs,
+    load_demo_result,
+    result_for_api,
+)
 from src.common.video_web import ensure_web_video
 from src.demo.classroom_demo import DemoConfig, run_classroom_demo
 
@@ -43,6 +49,14 @@ def _get_job(job_id: str) -> dict | None:
     with _jobs_lock:
         job = _jobs.get(job_id)
         return dict(job) if job else None
+
+
+def _safe_unlink(path: Path) -> None:
+    try:
+        if path.is_file():
+            path.unlink()
+    except OSError:
+        pass
 
 
 def _run_analysis(
@@ -76,8 +90,14 @@ def _run_analysis(
 
         _set_job(job_id, progress=98, message="Dang chuyen video cho trinh duyet...")
         ensure_web_video(run_dir)
+        finalize_web_run_dir(run_dir)
 
-        payload = result_for_api(run_dir, result, source_video=source_name)
+        payload = result_for_api(
+            run_dir,
+            result,
+            source_video=source_name,
+            web_output_only=True,
+        )
 
         _set_job(
             job_id,
@@ -89,6 +109,8 @@ def _run_analysis(
         )
     except Exception as exc:
         _set_job(job_id, status="error", message=str(exc), error=str(exc))
+    finally:
+        _safe_unlink(video_path)
 
 
 @app.get("/api/health")
@@ -123,11 +145,14 @@ def analyze():
     except ValueError:
         max_frames = 0
 
-    run_dir = make_demo_check_run_dir(upload.filename)
-    saved_video = input_video_path(run_dir)
-    upload.save(saved_video)
-
     job_id = uuid.uuid4().hex
+    run_dir = make_demo_check_run_dir(upload.filename)
+
+    suffix = Path(upload.filename).suffix or ".mp4"
+    fd, temp_name = tempfile.mkstemp(suffix=suffix, prefix=f"sbr_upload_{job_id}_")
+    os.close(fd)
+    saved_video = Path(temp_name)
+    upload.save(saved_video)
     _set_job(
         job_id,
         status="queued",
@@ -205,6 +230,6 @@ if __name__ == "__main__":
     print("=== Student Behavior Recognition Web ===")
     print("Pipeline: YOLOv8m + Skeleton + ST-GCN (preset chinh xac)")
     print("Mo trinh duyet: http://127.0.0.1:5050")
-    print("Ket qua luu tai: results/demo_check/")
+    print("Ket qua luu tai: results/demo_check/ (classroom_demo_final_web.mp4 + result.json)")
     threading.Timer(1.2, lambda: webbrowser.open("http://127.0.0.1:5050")).start()
     app.run(host="127.0.0.1", port=5050, debug=False, threaded=True)

@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.common.demo_check_paths import DEMO_CHECK_ROOT, result_json_path
+from src.common.demo_check_paths import DEMO_CHECK_ROOT, result_json_path, step3_output_path
 from src.common.video_web import WEB_OUTPUT_NAME, ensure_web_video, web_output_path
 from src.demo.classroom_demo import DemoResult
 
@@ -17,10 +17,14 @@ def save_demo_result(
     result: DemoResult,
     *,
     source_video: str | None = None,
+    output_video: Path | str | None = None,
 ) -> Path:
     run_dir = Path(run_dir)
+    result_data = result.to_dict()
+    if output_video is not None:
+        result_data["output_video"] = str(output_video)
     payload: dict[str, Any] = {
-        **result.to_dict(),
+        **result_data,
         "run_name": run_dir.name,
         "run_dir": str(run_dir),
         "source_video": source_video or "",
@@ -78,16 +82,38 @@ def _with_media_urls(run_name: str, data: dict[str, Any], *, prepare_web: bool =
     filename = _output_video_filename(run_dir)
     if filename:
         out["output_video_url"] = f"/files/{run_name}/{filename}"
-
-    input_name = "input_video.mp4"
-    if (run_dir / input_name).exists():
-        out["input_video_url"] = f"/files/{run_name}/{input_name}"
     return out
 
 
-def result_for_api(run_dir: Path, result: DemoResult, *, source_video: str | None = None) -> dict[str, Any]:
+def finalize_web_run_dir(run_dir: Path) -> Path | None:
+    """Giu classroom_demo_final_web.mp4, xoa ban raw OpenCV neu da transcode."""
     run_dir = Path(run_dir)
-    save_demo_result(run_dir, result, source_video=source_video)
+    web = web_output_path(run_dir)
+    raw = step3_output_path(run_dir)
+    if web.exists() and web.stat().st_size > 0 and raw.exists():
+        raw.unlink()
+    return web if web.exists() and web.stat().st_size > 0 else None
+
+
+def result_for_api(
+    run_dir: Path,
+    result: DemoResult,
+    *,
+    source_video: str | None = None,
+    web_output_only: bool = False,
+) -> dict[str, Any]:
+    run_dir = Path(run_dir)
+    output_video = None
+    if web_output_only:
+        web = web_output_path(run_dir)
+        if web.exists() and web.stat().st_size > 0:
+            output_video = web
+    save_demo_result(
+        run_dir,
+        result,
+        source_video=source_video,
+        output_video=output_video,
+    )
     data = load_demo_result(run_dir)
     assert data is not None
     return _with_media_urls(run_dir.name, data)

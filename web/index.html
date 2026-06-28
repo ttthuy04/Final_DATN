@@ -489,7 +489,7 @@
         <button class="tab active" data-tab="saved">Kết quả đã lưu</button>
         <button class="tab" data-tab="detail">Xem chi tiết</button>
         <button class="tab" data-tab="analyze">Phân tích mới</button>
-        <button class="tab" data-tab="guide">Hướng dẫn</button>
+        
       </div>
 
       <!-- Tab: Kết quả đã lưu -->
@@ -548,10 +548,7 @@
               <p class="progress-text" id="progressText">Đang xử lý...</p>
             </div>
 
-            <div class="note">
-              Kết quả tự động lưu vào <code>results/demo_check/</code>. Xem lại
-              ở menu <strong>Kết quả đã lưu</strong>.
-            </div>
+           
           </div>
 
           <div class="card">
@@ -703,38 +700,8 @@
         </div>
       </section>
 
-      <!-- Tab: Hướng dẫn -->
-      <section id="tab-guide" class="tab-panel">
-        <div class="card">
-          <h2><span>📖</span> Cách sử dụng</h2>
-          <ol class="guide-list">
-            <li>
-              <strong>Lần đầu:</strong> chạy
-              <code>python web/server.py</code> rồi mở
-              <code>http://127.0.0.1:5050</code>.
-            </li>
-            <li>
-              <strong>Phân tích mới:</strong> menu «Phân tích mới» → chọn video
-              → «Bắt đầu phân tích».
-            </li>
-            <li>
-              <strong>Xem lại:</strong> menu «Kết quả đã lưu» → bấm «Xem» (không
-              cần chạy lại AI).
-            </li>
-            <li>
-              <strong>Chi tiết:</strong> thống kê + video output ở menu «Xem chi
-              tiết».
-            </li>
-          </ol>
-        </div>
-        <div class="card" style="margin-top: 1rem">
-          <h2><span>⚙️</span> Pipeline</h2>
-          <p style="font-size: 0.9rem">
-            YOLOv8m → Skeleton (MediaPipe) → ST-GCN — preset chính xác, giống
-            <code>step3_classroom_demo.py</code>.
-          </p>
-        </div>
-      </section>
+     
+      
     </main>
 
     <script>

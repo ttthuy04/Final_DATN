@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
+import torch.nn as nn #nn là module của pytorch để tạo các layer của mô hình
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -24,7 +24,7 @@ from src.common.training_log import (
     print_log_header,
     print_log_row,
 )
-from src.dataset.skeleton_dataset import CLASS_NAMES, get_dataloaders
+from src.dataset.skeleton_dataset import CLASS_NAMES, get_dataloaders #lấy dữ liệu train/val/test
 from src.lstm.model import SkeletonLSTM
 
 PATHS = ModelPaths("lstm")
@@ -49,7 +49,7 @@ WEIGHT_BY_CLASS = {
     "standing": 1.0,
     "use_phone": 1.3,
 }
-
+#giúp mô hình chú ý tới nhãn hay bị sai
 
 def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,23 +64,25 @@ def run_epoch(model, loader, criterion, device, optimizer=None):
 
     ctx = torch.enable_grad() if is_train else torch.no_grad()
     with ctx:
-        for X, y in loader:
-            X, y = X.to(device), y.to(device)
+        for X, y in loader: #X là dữ liệu skeleton (32,60,100) , y là nhãn số (32,)
+            X, y = X.to(device), y.to(device) 
             if is_train:
                 optimizer.zero_grad()
-            logits = model(X)
-            loss = criterion(logits, y)
+            logits = model(X) #(32,4) đưa vào model để dự đoán
+
+            #criterion là hàm loss , để tính loss giữa dự đoán và nhãn
+            loss = criterion(logits, y) #(32,4) và (32,) tính loss
             if is_train:
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
-                optimizer.step()
+                loss.backward() #tính gradient
+                torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP) #clip gradient để tránh overfitting
+                optimizer.step() #cập nhật weights
 
             total_loss += loss.item() * X.size(0)
-            preds = logits.argmax(dim=1)
-            all_labels.extend(y.cpu().numpy())
-            all_preds.extend(preds.cpu().numpy())
+            preds = logits.argmax(dim=1) #lấy dự đoán có độ lớn nhất
+            all_labels.extend(y.cpu().numpy()) #lưu nhãn
+            all_preds.extend(preds.cpu().numpy()) #lưu dự đoán và nhãn
 
-    return total_loss / len(all_labels), np.array(all_labels), np.array(all_preds)
+    return total_loss / len(all_labels), np.array(all_labels), np.array(all_preds) #trả về loss, nhãn và dự đoán
 
 
 def main():
@@ -91,6 +93,7 @@ def main():
     print(f"Classes ({len(CLASS_NAMES)}): {CLASS_NAMES}", flush=True)
 
     train_loader, val_loader, _, split_info = get_dataloaders(batch_size=BATCH_SIZE)
+    #bỏ qua test loader , nó dùng trong evaluate , lấy trong data/skeleton
     print(
         f"Split -> train: {split_info['train']} | "
         f"val: {split_info['val']} | test: {split_info['test']}",
@@ -100,23 +103,23 @@ def main():
     missing = [c for c in CLASS_NAMES if c not in WEIGHT_BY_CLASS]
     if missing:
         raise ValueError(f"Thieu class weight cho: {missing}")
-    weight_list = [WEIGHT_BY_CLASS[c] for c in CLASS_NAMES]
-    class_weights = torch.tensor(weight_list, dtype=torch.float32).to(device)
+    weight_list = [WEIGHT_BY_CLASS[c] for c in CLASS_NAMES] 
+    class_weights = torch.tensor(weight_list, dtype=torch.float32).to(device) 
     print(f"Class weights: {dict(zip(CLASS_NAMES, weight_list))}", flush=True)
-
+#tạo mô hình
     model = SkeletonLSTM(
         num_classes=len(CLASS_NAMES),
         hidden_size=HIDDEN_SIZE,
         num_layers=NUM_LAYERS,
-        dropout=DROPOUT,
+        dropout=DROPOUT, 
     ).to(device)
     print(f"Params: {model.count_parameters():,}", flush=True)
 
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = nn.CrossEntropyLoss(weight=class_weights) #criterion là hàm loss , để tính loss giữa dự đoán và nhãn
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY
+        model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY # adam dùng để cập nhật trong số mô hình khi tính gradeint
     )
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau( # val_los không giảm sau vài epoch thì giảm learning rate
         optimizer,
         mode="min",
         factor=SCHEDULER_FACTOR,
@@ -139,10 +142,10 @@ def main():
     epochs_no_improve = 0
     prev_lr = optimizer.param_groups[0]["lr"]
 
-    for epoch in range(1, MAX_EPOCHS + 1):
-        train_loss, _, _ = run_epoch(model, train_loader, criterion, device, optimizer)
-        val_loss, y_val, y_pred = run_epoch(model, val_loader, criterion, device)
-        metrics = compute_classification_metrics(y_val, y_pred)
+    for epoch in range(1, MAX_EPOCHS + 1):  # train theo từng epoch
+        train_loss, _, _ = run_epoch(model, train_loader, criterion, device, optimizer) # train trên train loader
+        val_loss, y_val, y_pred = run_epoch(model, val_loader, criterion, device) # đánh giá trên val, k có optimer nên chỉ đánh giá 
+        metrics = compute_classification_metrics(y_val, y_pred) # tính metrics trên val
 
         print_log_row(epoch, train_loss, val_loss, metrics)
         append_log_csv(PATHS.training_log, epoch, train_loss, val_loss, metrics)
@@ -153,9 +156,9 @@ def main():
             print(f"  -> Giam LR: {prev_lr:.2e} -> {current_lr:.2e}", flush=True)
             prev_lr = current_lr
 
-        if metrics["Accuracy"] > best_val_acc + EARLY_STOP_MIN_DELTA:
-            best_val_acc = metrics["Accuracy"]
-            best_val_f1 = metrics["F1"]
+        if metrics["Accuracy"] > best_val_acc + EARLY_STOP_MIN_DELTA: #nếu acc tốt hơn best val acc thì lưu best val acc
+            best_val_acc = metrics["Accuracy"] #lưu best val acc
+            best_val_f1 = metrics["F1"] #lưu best val f1
             best_epoch = epoch
             epochs_no_improve = 0
             torch.save(
@@ -182,7 +185,7 @@ def main():
                 flush=True,
             )
         else:
-            epochs_no_improve += 1
+            epochs_no_improve += 1 # nếu val accuracy không tăng sau vài epoch thì dừng train
 
         if epochs_no_improve >= EARLY_STOP_PATIENCE:
             print(

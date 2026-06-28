@@ -15,10 +15,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.common.paths import ModelPaths #đường dẫn lưu model và log
+from src.common.train_loop import BATCH_SIZE, get_device, train_model
 from src.dataset.skeleton_dataset import CLASS_NAMES, get_dataloaders #
-from src.stgcn.train_loop import BATCH_SIZE, DROPOUT, get_device, train_stgcn
+from src.stgcn.model import SkeletonSTGCN
 
 PATHS = ModelPaths("stgcn")
+
+DROPOUT = 0.25  # tắt ngẫu nhiên 1 phần neuron để tránh overfitting
+
+# Luu best theo F1 macro (on dinh hon accuracy khi val dao dong)
+SAVE_BEST_BY = "f1"
+EARLY_STOP_PATIENCE = 15
 
 WEIGHT_BY_CLASS = {
     "normal": 1.6,
@@ -60,7 +67,7 @@ def main():
         flush=True,
     )
 # bắt đầu huấn luyện
-    best = train_stgcn(
+    best = train_model(
         model,
         train_loader,
         val_loader,
@@ -68,6 +75,11 @@ def main():
         PATHS.model_path,
         PATHS.training_log,
         CLASS_NAMES,
+        model_type="stgcn",
+        device=device,
+        dropout=DROPOUT,
+        save_best_by=SAVE_BEST_BY,
+        early_stop_patience=EARLY_STOP_PATIENCE,
         extra_ckpt={
             "variant": "yan2018_spatial_partition",
             "paper": "Yan et al., Spatial Temporal Graph Convolutional Networks, AAAI 2018",
@@ -77,7 +89,6 @@ def main():
             "learnable_edge_importance": True,
             "class_weights": weight_list,
         },
-        device=device,
     )
 
     print(f"\nHoan thanh. Best val acc: {best:.4f}", flush=True)

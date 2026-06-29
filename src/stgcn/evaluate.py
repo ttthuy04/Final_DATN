@@ -23,7 +23,7 @@ from src.stgcn.model import SkeletonSTGCN
 
 PATHS = ModelPaths("stgcn")
 
-
+# đọc lại best
 def load_model(device):
     if not PATHS.model_path.exists():
         raise FileNotFoundError(
@@ -45,7 +45,7 @@ def load_model(device):
 
 
 @torch.no_grad()
-def predict_loader(model, loader, device):
+def predict_loader(model, loader, device): # chạy model trên test loader
     all_preds, all_labels = [], []
     for X, y in loader:
         X = X.to(device)

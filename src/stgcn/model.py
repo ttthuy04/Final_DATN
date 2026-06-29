@@ -61,9 +61,9 @@ def _normalize_adjacency(A: np.ndarray, alpha: float = 0.001) -> np.ndarray:
     D = D + alpha # để tránh chia cho 0
     inv_sqrt = np.power(D, -0.5, dtype=np.float32)
     D_inv = np.diag(inv_sqrt) # tạo ma trận đường chéo từ inv_sqrt
-    return D_inv @ A @ D_inv # D^-1/2 (A+I) D^-1/2
+    return D_inv @ A @ D_inv # D^-1/2 (A) D^-1/2
 
-
+# tạo 3 ma trận kề
 def build_spatial_configuration(num_joints: int = NUM_JOINTS, edges=None) -> np.ndarray:
     """
     Spatial configuration partitioning (Yan et al., AAAI 2018, Sec 3.4):
@@ -95,7 +95,7 @@ def build_spatial_configuration(num_joints: int = NUM_JOINTS, edges=None) -> np.
         ],
         axis=0,
     )
-    return partitions.astype(np.float32) 
+    return partitions.astype(np.float32)  
 
 #GCN : học quan hệ giữa các khớp trong cùng 1 frame
 class GraphConv(nn.Module):
@@ -108,12 +108,12 @@ class GraphConv(nn.Module):
         self.num_partitions = A.shape[0] # 3, self, inward, outward
         self.register_buffer("A", A)
         self.PA = nn.Parameter(torch.ones_like(A)) # (3,25,25)
-        self.conv = nn.Conv2d(
-            in_channels, # 4
+        self.conv = nn.Conv2d(  
+            in_channels, # 4 x, ,y, vx, ,vy
             out_channels * self.num_partitions, # 64 x3 
             kernel_size=1,
-        )
-# input (N,C,T,V) --> (32,4,64,25
+        ) #(N,3,64,60,25)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x) # (N,64x3,T,V) conv 1x1
         n, kc, t, v = x.shape # 32, 192, 64, 25
@@ -121,9 +121,9 @@ class GraphConv(nn.Module):
         A = self.A * self.PA # (3,25,25) * (3,25,25) = (3,25,25)  , tự học quan hệ giữa các khớp trong cùng 1 frame
         out = 0
         for k in range(self.num_partitions): #duyệt qua 3 partition
-            x_k = torch.einsum("vw,nctv->nctw", A[k], x[:, k]) # 25,25 * (N,64,T,V) = (N,64,T,V)
+            x_k = torch.einsum("vw,nctv->nctw", A[k], x[:, k]) # 25,25 * (N,64,T,25) = (N,64,T,25) #GCN
             out = out + x_k
-        return out # (N,64,T,V) tensor gcn 
+        return out # (N,64,T,V)  gcn 
 
 
 class STGCNBlock(nn.Module):
@@ -144,7 +144,7 @@ class STGCNBlock(nn.Module):
                 out_channels,
                 out_channels,
                 kernel_size=(9, 1), # 9 frame theo gcn , 1 frame theo tcn
-                stride=(stride, 1), # stride: bước nhảy
+                stride=(stride, 1), # stride: bước nhảy, nếu stride =1 thì giữ nguyên số frame, nếu stride =2 thì giảm số frame đi 1 nửa
                 padding=(4, 0),
             ),
             nn.BatchNorm2d(out_channels), # batch norm : chuẩn hóa dữ liệu
@@ -159,7 +159,7 @@ class STGCNBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor: 
-        return self.relu(self.tcn(self.gcn(x)) + self.residual(x))
+        return self.relu(self.tcn(self.gcn(x)) + self.residual(x)) #output = relu(tcn(gcn(x)) + residual(x)) , học quan hệ giữa các khớp trong cùng 1 frame và học quan hệ giữa các frame liên tiếp
 
 
 class SkeletonSTGCN(nn.Module):
@@ -202,32 +202,34 @@ class SkeletonSTGCN(nn.Module):
                 STGCNBlock(256, 256, A, stride=1, dropout=dropout),
             ]
         )
-        self.pool = nn.AdaptiveAvgPool2d((1, 1)) # lấy trung bình theo thời gian
-        self.fc = nn.Linear(256, num_classes)
+        self.pool = nn.AdaptiveAvgPool2d((1, 1)) # lấy trung bình theo thời gian (N,256,1,1)
+        self.fc = nn.Linear(256, num_classes) #(N,256) --> (N,4)  classification layer , phân loại hành vi
 
     @staticmethod
-    def flat_to_graph( # đổi dữ liệu từ dạng flat sang dạng graph
+    def flat_to_graph( # đổi dữ liệu từ dạng flat sang dạng graph (N,60,25,4)
         x: torch.Tensor,
         normalize_root: bool = False,
         use_velocity: bool = False,
     ) -> torch.Tensor:
-        N, T, _ = x.shape
-        x = x.view(N, T, NUM_JOINTS, 4)
-        coords = x[..., :NUM_COORDS].clone() # lấy toạ độ x, y,
+        N, T, _ = x.shape #lấy kích thước batch, số frame, số khớp
+        x = x.view(N, T, NUM_JOINTS, 4) # (N,60,25,4)
+        coords = x[..., :NUM_COORDS].clone() # lấy toạ độ x, y, (N,60,25,2)
 
         if normalize_root:
             root = (coords[:, :, LEFT_SHOULDER] + coords[:, :, RIGHT_SHOULDER]) / 2.0 # tính toán tọa độ trung tâm của vai
             coords = coords - root.unsqueeze(2) # trừ tọa độ trung tâm của vai khỏi tọa độ các khớp
 # giảm ảnh hưởng vị trí sinh viên trong lớp học
-        pos = coords.permute(0, 3, 1, 2).contiguous() # đổi thứ tự các trục để phù hợp với input của gcn
-
+        pos = coords.permute(0, 3, 1, 2).contiguous() # đổi thứ tự các trục để phù hợp với input của gcn N,2,60,25
+# tính vận tốc giữa các frame liên tiếp
         if use_velocity:
             vel = pos[:, :, 1:, :] - pos[:, :, :-1, :]
-            vel = F.pad(vel, (0, 0, 1, 0), mode="constant", value=0.0)
+            vel = F.pad(vel, (0, 0, 1, 0), mode="constant", value=0.0) 
             pos = torch.cat([pos, vel], dim=1)
 
         return pos
-#chuyển input (N,60,100)-->(N,4,60,25)
+# ghép tọa độ vận tốc : (N,4,60,25) của posision và velocity
+
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.flat_to_graph(
             x,
@@ -238,7 +240,7 @@ class SkeletonSTGCN(nn.Module):
             x = block(x)
         x = self.pool(x)
         x = x.view(x.size(0), -1) 
-        return self.fc(x)
+        return self.fc(x) # classification layer (N,4) , phân loại hành vi 
 
     def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

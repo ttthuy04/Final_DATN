@@ -27,10 +27,12 @@ from src.common.demo_presets import (
     ACCURACY_FAST_VOTE_EVERY,
     ACCURACY_MIN_AGREE,
     ACCURACY_MIN_BEHAVIOR_CONF,
+    ACCURACY_MIN_SEAT_FRAMES,
     ACCURACY_MP_DETECTION,
     ACCURACY_MP_PRESENCE,
     ACCURACY_MP_TRACKING,
     ACCURACY_PREDICT_EVERY,
+    ACCURACY_SEAT_MATCH_IOU,
     ACCURACY_SMOOTH_VOTES,
     ACCURACY_YOLO_MODEL,
     accuracy_yolo_config,
@@ -82,6 +84,8 @@ class DemoConfig:
     smooth_votes: int = ACCURACY_SMOOTH_VOTES
     min_agree: int = ACCURACY_MIN_AGREE
     min_conf: float = ACCURACY_MIN_BEHAVIOR_CONF
+    seat_match_iou: float = ACCURACY_SEAT_MATCH_IOU
+    min_seat_frames: int = ACCURACY_MIN_SEAT_FRAMES
     max_frames: int = 0
     auto_short_video: bool = True
     draw_skeleton: bool = True
@@ -127,11 +131,88 @@ class DemoResult:
 
 
 @dataclass
-class TrackState:
+class Seat:
+    """Mot 'cho ngoi' = mot sinh vien.
+
+    Danh tinh theo VI TRI (khong phu thuoc track_id cua ByteTrack), nen khi
+    ByteTrack doi id cho cung 1 nguoi (bi che, ra/vao khung) thi van gom ve 1 seat.
+    """
+
+    seat_id: int
     buffer: deque = field(default_factory=lambda: deque(maxlen=WINDOW))
+    recent_preds: deque = field(default_factory=lambda: deque(maxlen=ACCURACY_SMOOTH_VOTES))
     label: str = ""
     conf: float = 0.0
-    recent_preds: deque = field(default_factory=lambda: deque(maxlen=7))
+    # Neo vi tri: trung binh cong bbox da quan sat (cho ngoi tinh nen on dinh)
+    sum_cx: float = 0.0
+    sum_cy: float = 0.0
+    sum_w: float = 0.0
+    sum_h: float = 0.0
+    n_pos: int = 0
+    last_frame: int = -1
+
+    def update_position(self, x1: int, y1: int, x2: int, y2: int, frame_idx: int) -> None:
+        self.sum_cx += (x1 + x2) / 2.0
+        self.sum_cy += (y1 + y2) / 2.0
+        self.sum_w += max(x2 - x1, 0)
+        self.sum_h += max(y2 - y1, 0)
+        self.n_pos += 1
+        self.last_frame = frame_idx
+
+    def anchor_box(self) -> tuple[float, float, float, float]:
+        if self.n_pos == 0:
+            return (0.0, 0.0, 0.0, 0.0)
+        cx = self.sum_cx / self.n_pos
+        cy = self.sum_cy / self.n_pos
+        bw = self.sum_w / self.n_pos
+        bh = self.sum_h / self.n_pos
+        return (cx - bw / 2.0, cy - bh / 2.0, cx + bw / 2.0, cy + bh / 2.0)
+
+
+def _iou_xyxy(a: tuple, b: tuple) -> float:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
+    inter = iw * ih
+    if inter <= 0:
+        return 0.0
+    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
+def assign_seat(
+    box_xyxy: tuple,
+    track_id: int,
+    seats: dict[int, "Seat"],
+    used_seat_ids: set[int],
+    track_to_seat: dict[int, int],
+    cfg: "DemoConfig",
+) -> int | None:
+    """Tim seat cho 1 detection.
+
+    Uu tien track_id da tung gan (ByteTrack on dinh -> giu nguyen seat, ke ca khi
+    nguoi dung len/ngoi xuong). Neu track_id moi/khong co -> khop theo IoU vi tri
+    de gom ve dung cho ngoi cu. Tra ve None neu khong khop -> tao seat moi.
+    """
+    if track_id >= 0:
+        sid = track_to_seat.get(track_id)
+        if sid is not None and sid in seats and sid not in used_seat_ids:
+            return sid
+
+    best_sid, best_iou = None, 0.0
+    for sid, seat in seats.items():
+        if sid in used_seat_ids:
+            continue
+        iou = _iou_xyxy(box_xyxy, seat.anchor_box())
+        if iou > best_iou:
+            best_iou, best_sid = iou, sid
+    if best_sid is not None and best_iou >= cfg.seat_match_iou:
+        return best_sid
+    return None
 
 
 def create_image_landmarker(model_path: Path) -> PoseLandmarker:
@@ -196,7 +277,7 @@ def skeleton_from_crop(landmarker, crop_bgr) -> np.ndarray | None:
     return np.array(landmarks_to_vector(res.pose_landmarks[0]), dtype=np.float32)
 
 
-def stable_label(track: TrackState, min_agree: int) -> str | None:
+def stable_label(track: "Seat", min_agree: int) -> str | None:
     if len(track.recent_preds) < min_agree:
         return None
     counts: dict[str, int] = defaultdict(int)
@@ -257,7 +338,7 @@ def _apply_short_video_tuning(cfg: DemoConfig, total_frames: int, fps: float) ->
     return cfg
 
 
-def should_predict_behavior(tr: TrackState, frame_idx: int, cfg: DemoConfig) -> bool:
+def should_predict_behavior(tr: "Seat", frame_idx: int, cfg: DemoConfig) -> bool:
     """Du 60 frame skeleton; du doan ngay lan dau, sau do nhanh cho den khi du vote."""
     if len(tr.buffer) != WINDOW:
         return False
@@ -268,7 +349,7 @@ def should_predict_behavior(tr: TrackState, frame_idx: int, cfg: DemoConfig) -> 
     return frame_idx % cfg.predict_every == 0
 
 
-def update_track_label(tr: TrackState, lbl: str, conf: float, cfg: DemoConfig) -> None:
+def update_track_label(tr: "Seat", lbl: str, conf: float, cfg: DemoConfig) -> None:
     """Hien nhan tam ngay lan du doan dau; vote de on dinh sau."""
     tr.recent_preds.append(lbl)
     stable = stable_label(tr, cfg.min_agree)
@@ -281,13 +362,13 @@ def update_track_label(tr: TrackState, lbl: str, conf: float, cfg: DemoConfig) -
 
 
 def aggregate_stats_from_tracks(
-    tracks: dict[int, TrackState], class_names: list[str]
+    seats: dict[int, "Seat"], class_names: list[str]
 ) -> dict[str, int]:
-    """Moi track_id lay nhan cuoi cung da on dinh."""
+    """Moi seat (sinh vien) lay nhan cuoi cung da on dinh."""
     counts = {c: 0 for c in class_names}
-    for tr in tracks.values():
-        if tr.label:
-            counts[tr.label] = counts.get(tr.label, 0) + 1
+    for seat in seats.values():
+        if seat.label:
+            counts[seat.label] = counts.get(seat.label, 0) + 1
     return counts
 
 
@@ -311,25 +392,36 @@ def aggregate_stats_from_log(
 
 
 def build_track_details(
-    tracks: dict[int, TrackState],
+    seats: dict[int, "Seat"],
     log_rows: list[dict],
 ) -> list[dict]:
-    """Tom tat tung track: nhan on dinh + so lan du doan trong log."""
+    """Tom tat tung sinh vien: cac hanh vi da duoc du doan trong video (theo thu tu xuat hien)."""
     pred_frames: dict[int, int] = defaultdict(int)
-    for row in log_rows:
-        pred_frames[int(row["track_id"])] += 1
+    labels_ordered: dict[int, list[str]] = defaultdict(list)
+    seen: dict[int, set[str]] = defaultdict(set)
+
+    for row in sorted(log_rows, key=lambda r: int(r.get("frame", 0))):
+        sid = int(row["track_id"])
+        pred_frames[sid] += 1
+        raw = str(row.get("raw_pred", "")).strip()
+        if raw and raw not in seen[sid]:
+            seen[sid].add(raw)
+            labels_ordered[sid].append(raw)
 
     details: list[dict] = []
-    for tid, tr in sorted(tracks.items()):
-        if not tr.label:
+    for sid, seat in sorted(seats.items()):
+        labels = list(labels_ordered.get(sid, []))
+        if not labels and seat.label:
+            labels = [seat.label]
+        if not labels:
             continue
-        display_id = tid if tid < 10000 else tid - 10000
         details.append(
             {
-                "track_id": display_id,
-                "label": tr.label,
-                "conf": round(tr.conf, 4),
-                "pred_frames": pred_frames.get(tid, 0),
+                "track_id": sid + 1,
+                "label": ", ".join(labels),
+                "labels": labels,
+                "conf": round(seat.conf, 4),
+                "pred_frames": pred_frames.get(sid, 0),
             }
         )
     return details
@@ -390,7 +482,9 @@ def run_classroom_demo(
         landmarker.close()
         raise RuntimeError(f"Khong ghi duoc video output: {cfg.output_video}")
 
-    tracks: dict[int, TrackState] = {}
+    seats: dict[int, Seat] = {}
+    track_to_seat: dict[int, int] = {}
+    next_seat_id = 0
     log_rows: list[dict] = []
     last_frame_counts: dict[str, int] = {}
     frame_idx = 0
@@ -419,10 +513,10 @@ def run_classroom_demo(
         frame_vis = frame.copy()
         frame_counts: dict[str, int] = defaultdict(int)
 
-        for pi, pbox in enumerate(geo_boxes):
-            tid = pbox.track_id
-            if tid < 0:
-                tid = 10000 + pi
+        # Xu ly box conf cao truoc -> gan seat on dinh hon (greedy theo do tin cay)
+        used_seat_ids: set[int] = set()
+        for pbox in sorted(geo_boxes, key=lambda b: b.conf, reverse=True):
+            raw_tid = pbox.track_id
             x1, y1, x2, y2 = pbox.x1, pbox.y1, pbox.x2, pbox.y2
             ex1, ey1, ex2, ey2 = expand_bbox(x1, y1, x2, y2, w, h, cfg.padding)
             crop = frame[ey1:ey2, ex1:ex2]
@@ -435,29 +529,39 @@ def run_classroom_demo(
 
             crop_h, crop_w = crop.shape[:2]
             skel_ok = vec is not None and skeleton_is_person_like(vec, yolo_cfg)
+
+            # Gan detection vao mot seat (1 vi tri = 1 sinh vien)
+            sid = assign_seat(
+                (x1, y1, x2, y2), raw_tid, seats, used_seat_ids, track_to_seat, cfg
+            )
+            if sid is None:
+                sid = next_seat_id
+                next_seat_id += 1
+                seats[sid] = Seat(seat_id=sid, recent_preds=deque(maxlen=cfg.smooth_votes))
+            used_seat_ids.add(sid)
+            if raw_tid >= 0:
+                track_to_seat[raw_tid] = sid
+            seat = seats[sid]
+            seat.update_position(x1, y1, x2, y2, frame_idx)
+            display_id = sid + 1
+
             if cfg.draw_skeleton and vec is not None:
                 draw_skeleton_from_vec(frame_vis, vec, ex1, ey1, crop_w, crop_h)
 
-            if tid not in tracks:
-                tracks[tid] = TrackState()
-            tr = tracks[tid]
-            if len(tr.recent_preds) == 0:
-                tr.recent_preds = deque(maxlen=cfg.smooth_votes)
-
             if skel_ok or (vec is not None and not cfg.require_quality_skeleton):
                 if vec is not None:
-                    tr.buffer.append(vec)
+                    seat.buffer.append(vec)
 
-            if len(tr.buffer) == WINDOW and should_predict_behavior(tr, frame_idx, cfg):
-                seq = np.stack(list(tr.buffer), axis=0)
+            if len(seat.buffer) == WINDOW and should_predict_behavior(seat, frame_idx, cfg):
+                seq = np.stack(list(seat.buffer), axis=0)
                 lbl, conf, _ = predict_behavior(stgcn, class_names, seq, device)
                 if conf >= cfg.min_conf:
-                    update_track_label(tr, lbl, conf, cfg)
+                    update_track_label(seat, lbl, conf, cfg)
                     log_rows.append(
                         {
                             "frame": frame_idx,
-                            "track_id": tid,
-                            "label": tr.label or lbl,
+                            "track_id": sid,
+                            "label": seat.label or lbl,
                             "conf": round(conf, 4),
                             "raw_pred": lbl,
                             "yolo_conf": round(pbox.conf, 4),
@@ -465,18 +569,18 @@ def run_classroom_demo(
                         }
                     )
 
-            if tr.label:
-                lbl_vi = LABEL_VI.get(tr.label, tr.label)
-                color = LABEL_COLOR.get(tr.label, (0, 255, 0))
-                frame_counts[tr.label] += 1
+            if seat.label:
+                lbl_vi = LABEL_VI.get(seat.label, seat.label)
+                color = LABEL_COLOR.get(seat.label, (0, 255, 0))
+                frame_counts[seat.label] += 1
             else:
                 lbl_vi = "..."
                 color = (180, 180, 180)
 
             cv2.rectangle(frame_vis, (ex1, ey1), (ex2, ey2), color, 2)
-            conf_txt = f"{tr.conf * 100:.0f}%" if tr.label else "--"
+            conf_txt = f"{seat.conf * 100:.0f}%" if seat.label else "--"
             yolo_txt = f"Y{pbox.conf * 100:.0f}%"
-            txt = f"ID{tid} {lbl_vi} {conf_txt} ({yolo_txt})"
+            txt = f"ID{display_id} {lbl_vi} {conf_txt} ({yolo_txt})"
             cv2.putText(
                 frame_vis,
                 txt,
@@ -512,10 +616,16 @@ def run_classroom_demo(
     writer.release()
 
     stats_log = aggregate_stats_from_log(log_rows, class_names)
-    stats_tracks = aggregate_stats_from_tracks(tracks, class_names)
+    stats_tracks = aggregate_stats_from_tracks(seats, class_names)
     stats_by_class = stats_log if sum(stats_log.values()) > 0 else stats_tracks
     stats_table, total_students = build_stats_table(stats_by_class, class_names)
-    track_details = build_track_details(tracks, log_rows)
+    track_details = build_track_details(seats, log_rows)
+
+    # Tracks phat hien = so sinh vien (seat) co y nghia: da co nhan HOAC xuat hien
+    # du lau. Bo seat chi loe len 1-2 frame (nhieu/false positive thoang qua).
+    meaningful_seats = [
+        s for s in seats.values() if s.label or s.n_pos >= cfg.min_seat_frames
+    ]
 
     elapsed = time.time() - t0
     _report_progress(progress, 1.0, "Hoan thanh!")
@@ -526,7 +636,7 @@ def run_classroom_demo(
         stats_by_class=stats_by_class,
         stats_table=stats_table,
         total_students=total_students,
-        tracks_detected=len(tracks),
+        tracks_detected=len(meaningful_seats),
         frames_processed=frame_idx,
         elapsed_sec=elapsed,
         last_frame_counts=last_frame_counts,

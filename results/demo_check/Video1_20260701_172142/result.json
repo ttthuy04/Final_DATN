@@ -1,0 +1,141 @@
+{
+  "output_video": "C:\\Documen\\A_DATN\\Student_Behavior_Recognition\\results\\demo_check\\Video1_20260701_172142\\classroom_demo_final_web.mp4",
+  "class_names": [
+    "normal",
+    "sleep",
+    "standing",
+    "use_phone"
+  ],
+  "stats_by_class": {
+    "normal": 3,
+    "sleep": 0,
+    "standing": 0,
+    "use_phone": 5
+  },
+  "stats_table": [
+    [
+      "Binh thuong",
+      "normal",
+      3,
+      "37.5%"
+    ],
+    [
+      "Ngu gat",
+      "sleep",
+      0,
+      "0.0%"
+    ],
+    [
+      "Dung day",
+      "standing",
+      0,
+      "0.0%"
+    ],
+    [
+      "Dung dien thoai",
+      "use_phone",
+      5,
+      "62.5%"
+    ],
+    [
+      "Tong sinh vien",
+      "—",
+      8,
+      "100.0%"
+    ]
+  ],
+  "total_students": 8,
+  "tracks_detected": 10,
+  "frames_processed": 441,
+  "elapsed_sec": 499.52,
+  "last_frame_counts": {
+    "use_phone": 3,
+    "normal": 3,
+    "standing": 2
+  },
+  "track_details": [
+    {
+      "track_id": 1,
+      "label": "use_phone, normal",
+      "labels": [
+        "use_phone",
+        "normal"
+      ],
+      "conf": 0.5773,
+      "pred_frames": 20
+    },
+    {
+      "track_id": 2,
+      "label": "normal, use_phone",
+      "labels": [
+        "normal",
+        "use_phone"
+      ],
+      "conf": 0.7767,
+      "pred_frames": 20
+    },
+    {
+      "track_id": 3,
+      "label": "use_phone",
+      "labels": [
+        "use_phone"
+      ],
+      "conf": 0.784,
+      "pred_frames": 17
+    },
+    {
+      "track_id": 4,
+      "label": "normal, use_phone",
+      "labels": [
+        "normal",
+        "use_phone"
+      ],
+      "conf": 0.5725,
+      "pred_frames": 22
+    },
+    {
+      "track_id": 6,
+      "label": "use_phone",
+      "labels": [
+        "use_phone"
+      ],
+      "conf": 0.8997,
+      "pred_frames": 21
+    },
+    {
+      "track_id": 7,
+      "label": "use_phone, normal",
+      "labels": [
+        "use_phone",
+        "normal"
+      ],
+      "conf": 0.5919,
+      "pred_frames": 17
+    },
+    {
+      "track_id": 8,
+      "label": "use_phone, standing, normal",
+      "labels": [
+        "use_phone",
+        "standing",
+        "normal"
+      ],
+      "conf": 0.5788,
+      "pred_frames": 5
+    },
+    {
+      "track_id": 9,
+      "label": "normal, standing",
+      "labels": [
+        "normal",
+        "standing"
+      ],
+      "conf": 0.6051,
+      "pred_frames": 10
+    }
+  ],
+  "run_name": "Video1_20260701_172142",
+  "run_dir": "C:\\Documen\\A_DATN\\Student_Behavior_Recognition\\results\\demo_check\\Video1_20260701_172142",
+  "source_video": "Video1.mp4",
+  "created_at": "2026-07-01T17:30:05"
+}

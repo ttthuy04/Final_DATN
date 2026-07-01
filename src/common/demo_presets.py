@@ -54,6 +54,13 @@ ACCURACY_MIN_AGREE = 3
 ACCURACY_MIN_BEHAVIOR_CONF = 0.55
 ACCURACY_BBOX_PADDING = 0.18
 
+# Gop track theo vi tri (1 vi tri = 1 sinh vien):
+# - ByteTrack co the doi track_id cho cung 1 nguoi (bi che, ra vao khung) -> dem trung.
+# - Gan moi detection vao mot "seat" theo track_id (uu tien) + IoU vi tri (du phong)
+#   nen 1 cho ngoi chi tinh 1 sinh vien du track_id thay doi.
+ACCURACY_SEAT_MATCH_IOU = 0.35  # IoU toi thieu de coi detection thuoc ve seat da co
+ACCURACY_MIN_SEAT_FRAMES = 3  # seat xuat hien it hon nguong nay (va chua co nhan) -> bo (nhieu)
+
 # MediaPipe tren crop (chat luong skeleton cho ST-GCN)
 ACCURACY_MP_DETECTION = 0.55
 ACCURACY_MP_PRESENCE = 0.55

@@ -649,7 +649,7 @@
               <thead>
                 <tr>
                   <th>Track ID</th>
-                  <th>Hành vi chính</th>
+                  <th>Hành vi ghi nhận</th>
                   <th>Độ tin cậy</th>
                   <th>Lần dự đoán</th>
                 </tr>
@@ -908,11 +908,17 @@
         tbody.innerHTML = "";
         const tracks = result.track_details || [];
         tracks.forEach((t) => {
-          const info = LABELS[t.label] || { vi: t.label, badge: "" };
+          const labelCodes = t.labels && t.labels.length ? t.labels : [t.label].filter(Boolean);
+          const badges = labelCodes
+            .map((code) => {
+              const info = LABELS[code] || { vi: code, badge: "" };
+              return `<span class="badge ${info.badge}">${info.vi}</span>`;
+            })
+            .join(" ");
           const tr = document.createElement("tr");
           tr.innerHTML = `
           <td>#${t.track_id}</td>
-          <td><span class="badge ${info.badge}">${info.vi}</span></td>
+          <td>${badges || "—"}</td>
           <td>${(t.conf * 100).toFixed(0)}%</td>
           <td>${t.pred_frames ?? 0}</td>
         `;

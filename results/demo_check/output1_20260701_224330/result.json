@@ -1,0 +1,120 @@
+{
+  "output_video": "C:\\Documen\\A_DATN\\Student_Behavior_Recognition\\results\\demo_check\\output1_20260701_224330\\classroom_demo_final_web.mp4",
+  "class_names": [
+    "normal",
+    "sleep",
+    "standing",
+    "use_phone"
+  ],
+  "stats_by_class": {
+    "normal": 2,
+    "sleep": 0,
+    "standing": 1,
+    "use_phone": 3
+  },
+  "stats_table": [
+    [
+      "Binh thuong",
+      "normal",
+      2,
+      "33.3%"
+    ],
+    [
+      "Ngu gat",
+      "sleep",
+      0,
+      "0.0%"
+    ],
+    [
+      "Dung day",
+      "standing",
+      1,
+      "16.7%"
+    ],
+    [
+      "Dung dien thoai",
+      "use_phone",
+      3,
+      "50.0%"
+    ],
+    [
+      "Tong sinh vien",
+      "—",
+      6,
+      "100.0%"
+    ]
+  ],
+  "total_students": 6,
+  "tracks_detected": 8,
+  "frames_processed": 387,
+  "elapsed_sec": 1072.24,
+  "last_frame_counts": {
+    "use_phone": 3,
+    "normal": 3
+  },
+  "track_details": [
+    {
+      "track_id": 1,
+      "label": "use_phone, normal",
+      "labels": [
+        "use_phone",
+        "normal"
+      ],
+      "conf": 0.6136,
+      "pred_frames": 3
+    },
+    {
+      "track_id": 2,
+      "label": "normal, standing",
+      "labels": [
+        "normal",
+        "standing"
+      ],
+      "conf": 0.5602,
+      "pred_frames": 16
+    },
+    {
+      "track_id": 3,
+      "label": "standing, normal, use_phone",
+      "labels": [
+        "standing",
+        "normal",
+        "use_phone"
+      ],
+      "conf": 0.7332,
+      "pred_frames": 12
+    },
+    {
+      "track_id": 4,
+      "label": "use_phone",
+      "labels": [
+        "use_phone"
+      ],
+      "conf": 0.9632,
+      "pred_frames": 19
+    },
+    {
+      "track_id": 5,
+      "label": "normal, use_phone",
+      "labels": [
+        "normal",
+        "use_phone"
+      ],
+      "conf": 0.7247,
+      "pred_frames": 14
+    },
+    {
+      "track_id": 6,
+      "label": "use_phone",
+      "labels": [
+        "use_phone"
+      ],
+      "conf": 0.8942,
+      "pred_frames": 4
+    }
+  ],
+  "run_name": "output1_20260701_224330",
+  "run_dir": "C:\\Documen\\A_DATN\\Student_Behavior_Recognition\\results\\demo_check\\output1_20260701_224330",
+  "source_video": "output1.mp4",
+  "created_at": "2026-07-01T23:01:28"
+}
